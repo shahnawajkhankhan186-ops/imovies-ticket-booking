@@ -1,0 +1,63 @@
+name: IMovies CI
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    services:
+      mongodb:
+        image: mongo:7.0
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd "mongosh --eval 'rs.initiate(); rs.status().ok'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Monorepo Root Dependencies
+        run: npm ci || npm install
+
+      - name: Install Server Dependencies
+        run: npm --prefix server ci || npm --prefix server install
+
+      - name: Install Client Dependencies
+        run: npm --prefix client ci || npm --prefix client install
+
+      - name: Lint Server & Client
+        run: |
+          npm --prefix server run lint --if-present
+          npm --prefix client run lint --if-present
+
+      - name: Build Client
+        run: npm --prefix client run build
+        env:
+          VITE_API_URL: http://localhost:5000/api
+          VITE_SOCKET_URL: http://localhost:5000
+
+      - name: Run Server Tests
+        run: npm --prefix server test --if-present
+        env:
+          NODE_ENV: test
+          MONGODB_URI: mongodb://localhost:27017/imovies_test?replicaSet=rs0
+          JWT_SECRET: ci_test_jwt_secret_key_12345
+          CLIENT_URL: http://localhost:5173
+          RAZORPAY_KEY_ID: rzp_test_dummy
+          RAZORPAY_KEY_SECRET: rzp_test_dummy_secret
+          RAZORPAY_WEBHOOK_SECRET: rzp_test_webhook_secret

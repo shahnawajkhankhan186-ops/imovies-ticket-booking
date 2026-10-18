@@ -1,0 +1,68 @@
+import express from 'express';
+import helmet from 'helmet';
+import cors from 'cors';
+import cookieParser from 'cookie-parser';
+import morgan from 'morgan';
+import { env } from './config/env.js';
+import healthRoutes from './routes/health.routes.js';
+import authRoutes from './routes/auth.routes.js';
+import publicRoutes from './routes/public.routes.js';
+import userRoutes from './routes/user.routes.js';
+import adminRoutes from './routes/admin.routes.js';
+import webhookRoutes from './routes/webhook.routes.js';
+import { errorHandler } from './middleware/errorHandler.js';
+import { MESSAGES } from './constants/messages.js';
+
+const app = express();
+
+// Security Headers
+app.use(helmet());
+
+// CORS configuration
+app.use(
+  cors({
+    origin: env.CLIENT_URL,
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'x-razorpay-signature'],
+  })
+);
+
+// Logging
+if (env.NODE_ENV !== 'test') {
+  app.use(morgan('dev'));
+}
+
+// Preserve raw body buffer for webhook signature verification
+app.use(
+  express.json({
+    limit: '2mb',
+    verify: (req, res, buf) => {
+      req.rawBody = buf;
+    },
+  })
+);
+
+app.use(express.urlencoded({ extended: true, limit: '2mb' }));
+app.use(cookieParser());
+
+// Base Routes
+app.use('/api', healthRoutes);
+app.use('/api/auth', authRoutes);
+app.use('/api/public', publicRoutes);
+app.use('/api/user', userRoutes);
+app.use('/api/admin', adminRoutes);
+app.use('/api/webhooks', webhookRoutes);
+
+// Catch-all 404 handler for unmatched routes
+app.use((req, res) => {
+  res.status(404).json({
+    error: MESSAGES.RESOURCE_NOT_FOUND,
+    code: 'NOT_FOUND',
+  });
+});
+
+// Centralized Error Handler
+app.use(errorHandler);
+
+export default app;

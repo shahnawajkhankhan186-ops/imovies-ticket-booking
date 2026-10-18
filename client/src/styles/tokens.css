@@ -1,0 +1,62 @@
+:root {
+  /* Color Palette - Cinematic Dark Theme */
+  --bg-main: #0a0c13;
+  --bg-surface: #121624;
+  --bg-card: #181d30;
+  --bg-card-hover: #1f253d;
+  --bg-modal: #151a2b;
+
+  /* Primary Brand Neon & Crimson Accents */
+  --primary-color: #e50914;
+  --primary-hover: #f40612;
+  --primary-glow: rgba(229, 9, 20, 0.35);
+
+  --accent-gold: #f59e0b;
+  --accent-cyan: #06b6d4;
+  --accent-purple: #8b5cf6;
+
+  /* Text Colors */
+  --text-main: #f8fafc;
+  --text-muted: #94a3b8;
+  --text-dim: #64748b;
+
+  /* Borders & Dividers */
+  --border-subtle: #242c44;
+  --border-focus: #3b82f6;
+
+  /* Seat Status Colors (Single Source of Truth in CSS) */
+  --seat-available-border: #475569;
+  --seat-available-bg: #1e293b;
+  --seat-available-hover: #334155;
+
+  --seat-selected-bg: #22c55e;
+  --seat-selected-glow: rgba(34, 197, 94, 0.4);
+
+  --seat-held-bg: #f59e0b;
+  --seat-held-glow: rgba(245, 158, 11, 0.35);
+
+  --seat-booked-bg: #475569;
+  --seat-booked-opacity: 0.4;
+
+  --seat-blocked-bg: #1e2029;
+  --seat-blocked-border: #2d303e;
+
+  /* Status Badges */
+  --status-success: #10b981;
+  --status-warning: #f59e0b;
+  --status-danger: #ef4444;
+  --status-info: #3b82f6;
+
+  /* Typography */
+  --font-family-sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-family-heading: 'Outfit', sans-serif;
+
+  /* Shadows & Glassmorphism */
+  --glass-bg: rgba(18, 22, 36, 0.85);
+  --glass-border: rgba(255, 255, 255, 0.08);
+  --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+
+  /* Transitions */
+  --transition-fast: 0.15s ease;
+  --transition-normal: 0.25s ease;
+}

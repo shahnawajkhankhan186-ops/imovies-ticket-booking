@@ -1,0 +1,212 @@
+import React, { useEffect, useState } from 'react';
+import { useParams, Link } from 'react-router-dom';
+import { Star, Clock, Calendar, Play, Ticket, Shield, MessageSquare, ArrowLeft } from 'lucide-react';
+import api from '../../lib/api';
+import { formatIST } from '../../lib/ist-date';
+import LoadingSpinner from '../../components/ui/LoadingSpinner';
+import TrailerModal from '../../components/movies/TrailerModal';
+import Button from '../../components/ui/Button';
+
+export default function MovieDetailPage() {
+  const { id } = useParams();
+  const [movie, setMovie] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [trailerOpen, setTrailerOpen] = useState(false);
+
+  useEffect(() => {
+    async function loadMovie() {
+      setLoading(true);
+      try {
+        const res = await api.get(`/public/movies/${id}`);
+        setMovie(res.data.movie);
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadMovie();
+  }, [id]);
+
+  if (loading) return <LoadingSpinner text="Loading movie details..." fullScreen />;
+  if (error || !movie) {
+    return (
+      <div className="container py-5 text-center">
+        <h3 className="text-danger fw-bold">Movie not found</h3>
+        <p className="text-secondary">{error || 'Unable to locate movie details.'}</p>
+        <Link to="/" className="btn btn-outline-secondary mt-3">
+          Back to Movies
+        </Link>
+      </div>
+    );
+  }
+
+  const isUpcoming = movie.status === 'UPCOMING';
+
+  return (
+    <div className="movie-detail-page pb-5">
+      {/* Backdrop Header */}
+      <div
+        className="position-relative w-100 py-5"
+        style={{
+          minHeight: '380px',
+          background: `linear-gradient(to bottom, rgba(10, 12, 19, 0.7) 0%, rgba(10, 12, 19, 0.95) 100%), url(${
+            movie.bannerUrl || movie.posterUrl
+          }) center/cover no-repeat`,
+          borderBottom: '1px solid var(--border-subtle)',
+        }}
+      >
+        <div className="container py-4">
+          <Link to="/" className="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1 mb-4 rounded-pill text-light">
+            <ArrowLeft size={16} />
+            <span>Back to Movies</span>
+          </Link>
+
+          <div className="row g-4 align-items-center">
+            {/* Poster */}
+            <div className="col-md-4 col-lg-3 text-center text-md-start">
+              <img
+                src={movie.posterUrl}
+                alt={movie.title}
+                className="img-fluid rounded-4 shadow-lg border border-secondary"
+                style={{ maxHeight: '380px', width: 'auto', aspectRatio: '2/3', objectFit: 'cover' }}
+              />
+            </div>
+
+            {/* Core Details */}
+            <div className="col-md-8 col-lg-9">
+              <div className="d-flex flex-wrap align-items-center gap-2 mb-2">
+                <span className="badge bg-danger px-2 py-1 text-uppercase">{movie.certificate}</span>
+                <span className="badge bg-dark border border-secondary text-light">
+                  {movie.status === 'NOW_SHOWING' ? 'Now Showing' : 'Coming Soon'}
+                </span>
+                {movie.avgRating && (
+                  <span className="badge bg-warning bg-opacity-25 border border-warning text-warning d-flex align-items-center gap-1 px-2 py-1">
+                    <Star size={12} fill="#f59e0b" />
+                    <strong>{movie.avgRating} / 5</strong>
+                    <span className="text-secondary">({movie.reviewCount} reviews)</span>
+                  </span>
+                )}
+              </div>
+
+              <h1 className="display-5 fw-extrabold text-white mb-2">{movie.title}</h1>
+
+              <div className="d-flex flex-wrap align-items-center gap-3 text-secondary small mb-3">
+                <span className="d-flex align-items-center gap-1">
+                  <Clock size={14} /> {movie.durationMinutes} mins
+                </span>
+                <span>•</span>
+                <span>{movie.languages?.join(', ')}</span>
+                <span>•</span>
+                <span>{movie.genres?.join(', ')}</span>
+                <span>•</span>
+                <span className="d-flex align-items-center gap-1">
+                  <Calendar size={14} /> Released {new Date(movie.releaseDate).toLocaleDateString('en-IN', { year: 'numeric', month: 'short', day: 'numeric' })}
+                </span>
+              </div>
+
+              <p className="text-light opacity-90 fs-6 lh-base mb-4" style={{ maxWidth: '750px' }}>
+                {movie.synopsis}
+              </p>
+
+              {/* Action Buttons */}
+              <div className="d-flex flex-wrap gap-3">
+                {!isUpcoming ? (
+                  <Link to={`/movies/${movie._id}/shows`} className="btn btn-danger btn-lg px-4 py-2 d-flex align-items-center gap-2 fw-semibold">
+                    <Ticket size={20} />
+                    <span>Book Tickets</span>
+                  </Link>
+                ) : (
+                  <span className="badge bg-secondary p-3 fs-6">Tickets Opening Soon</span>
+                )}
+
+                {movie.trailerUrl && (
+                  <button
+                    type="button"
+                    onClick={() => setTrailerOpen(true)}
+                    className="btn btn-outline-light btn-lg px-4 py-2 d-flex align-items-center gap-2 fw-semibold"
+                  >
+                    <Play size={18} fill="#ffffff" />
+                    <span>Watch Trailer</span>
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Cast, Crew & Reviews */}
+      <div className="container py-5">
+        <div className="row g-5">
+          {/* Left Column: Cast & Crew */}
+          <div className="col-lg-7">
+            <h4 className="fw-bold text-light mb-4 pb-2 border-bottom border-secondary border-opacity-25">
+              Cast & Crew
+            </h4>
+
+            {movie.director && (
+              <div className="mb-4">
+                <span className="text-secondary small fw-semibold text-uppercase d-block mb-1">Director</span>
+                <span className="text-light fw-medium fs-6">{movie.director}</span>
+              </div>
+            )}
+
+            <div>
+              <span className="text-secondary small fw-semibold text-uppercase d-block mb-2">Key Cast</span>
+              <div className="d-flex flex-wrap gap-2">
+                {movie.cast?.map((actor) => (
+                  <span key={actor} className="badge bg-dark border border-secondary text-light px-3 py-2 fs-7 fw-normal">
+                    {actor}
+                  </span>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Right Column: User Reviews */}
+          <div className="col-lg-5">
+            <div className="d-flex align-items-center justify-content-between mb-4 pb-2 border-bottom border-secondary border-opacity-25">
+              <h4 className="fw-bold text-light m-0">User Reviews</h4>
+              <span className="badge bg-secondary text-light">{movie.reviewCount || 0} reviews</span>
+            </div>
+
+            {movie.recentReviews?.length === 0 ? (
+              <div className="im-glass p-4 rounded-4 text-center text-secondary small">
+                <MessageSquare size={28} className="mb-2 text-dim" />
+                <div>No reviews yet. Verified viewers who attend this movie will be able to leave a rating.</div>
+              </div>
+            ) : (
+              <div className="d-flex flex-column gap-3">
+                {movie.recentReviews?.map((rev) => (
+                  <div key={rev._id} className="im-glass p-3 rounded-3 border border-secondary border-opacity-25">
+                    <div className="d-flex justify-content-between align-items-center mb-1">
+                      <strong className="text-light small">{rev.userName}</strong>
+                      <div className="d-flex align-items-center gap-1 text-warning small">
+                        <Star size={12} fill="#f59e0b" />
+                        <span>{rev.rating} / 5</span>
+                      </div>
+                    </div>
+                    <p className="text-secondary small m-0 lh-sm">{rev.comment}</p>
+                    <div className="text-dim mt-2" style={{ fontSize: '10px' }}>
+                      {formatIST(rev.createdAt)}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Trailer Modal */}
+      <TrailerModal
+        isOpen={trailerOpen}
+        onClose={() => setTrailerOpen(false)}
+        trailerUrl={movie.trailerUrl}
+        title={movie.title}
+      />
+    </div>
+  );
+}

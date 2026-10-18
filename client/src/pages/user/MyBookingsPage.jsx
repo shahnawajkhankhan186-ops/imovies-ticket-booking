@@ -1,0 +1,331 @@
+import React, { useEffect, useState, useCallback } from 'react';
+import { Link } from 'react-router-dom';
+import api from '../../lib/api';
+import { formatINR } from '../../lib/currency';
+import { formatISTDateTime } from '../../lib/ist-date';
+import StatusBadge from '../../components/ui/StatusBadge';
+import Button from '../../components/ui/Button';
+import LoadingSpinner from '../../components/ui/LoadingSpinner';
+import EmptyState from '../../components/ui/EmptyState';
+import ConfirmDialog from '../../components/ui/ConfirmDialog';
+import Modal from '../../components/ui/Modal';
+import { Film, Ticket, ArrowRight, XCircle, Star, AlertTriangle } from 'lucide-react';
+import toast from 'react-hot-toast';
+
+export default function MyBookingsPage() {
+  const [bookings, setBookings] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState('ALL'); // ALL, CONFIRMED, AWAITING_PAYMENT, CANCELLED
+
+  // Cancel dialog state
+  const [cancelTarget, setCancelTarget] = useState(null);
+  const [cancelling, setCancelling] = useState(false);
+
+  // Review modal state
+  const [reviewTarget, setReviewTarget] = useState(null);
+  const [rating, setRating] = useState(5);
+  const [comment, setComment] = useState('');
+  const [submittingReview, setSubmittingReview] = useState(false);
+
+  const fetchBookings = useCallback(async () => {
+    try {
+      setLoading(true);
+      const res = await api.get('/user/bookings?limit=50');
+      setBookings(res.data.bookings || []);
+    } catch (err) {
+      toast.error(err.message || 'Failed to fetch bookings');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchBookings();
+  }, [fetchBookings]);
+
+  const handleConfirmCancel = async () => {
+    if (!cancelTarget) return;
+    try {
+      setCancelling(true);
+      const res = await api.post(`/user/bookings/${cancelTarget._id}/cancel`);
+      toast.success(res.data.message || 'Booking cancelled successfully');
+      fetchBookings();
+    } catch (err) {
+      toast.error(err.message || 'Failed to cancel booking');
+    } finally {
+      setCancelling(false);
+      setCancelTarget(null);
+    }
+  };
+
+  const handleSubmitReview = async (e) => {
+    e.preventDefault();
+    if (!reviewTarget) return;
+    try {
+      setSubmittingReview(true);
+      await api.post('/user/reviews', {
+        movieId: reviewTarget.showId?.movieId?._id,
+        rating,
+        comment,
+      });
+      toast.success('Thank you! Your review has been posted.');
+      setReviewTarget(null);
+      setComment('');
+    } catch (err) {
+      toast.error(err.message || 'Failed to post review');
+    } finally {
+      setSubmittingReview(false);
+    }
+  };
+
+  const filteredBookings = bookings.filter((b) => {
+    if (filter === 'ALL') return true;
+    if (filter === 'CONFIRMED') return b.status === 'CONFIRMED' || b.status === 'USED';
+    if (filter === 'AWAITING_PAYMENT') return b.status === 'AWAITING_PAYMENT';
+    if (filter === 'CANCELLED') return b.status === 'CANCELLED' || b.status === 'EXPIRED';
+    return true;
+  });
+
+  return (
+    <div className="container py-4">
+      <div className="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+        <div>
+          <h2 className="fw-bold m-0">My Bookings</h2>
+          <p className="text-secondary small m-0">Manage all your movie tickets, reservations, and history.</p>
+        </div>
+
+        {/* Status Filter Tabs */}
+        <div className="btn-group im-glass p-1 rounded-3">
+          {[
+            { id: 'ALL', label: 'All' },
+            { id: 'CONFIRMED', label: 'Confirmed' },
+            { id: 'AWAITING_PAYMENT', label: 'Pending Hold' },
+            { id: 'CANCELLED', label: 'Cancelled / Expired' },
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setFilter(tab.id)}
+              className={`btn btn-sm ${filter === tab.id ? 'btn-primary' : 'btn-link text-secondary text-decoration-none'}`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {loading ? (
+        <div className="text-center py-5">
+          <LoadingSpinner message="Loading your tickets..." />
+        </div>
+      ) : filteredBookings.length === 0 ? (
+        <div className="im-glass p-5 rounded-4 text-center">
+          <EmptyState
+            title="No Bookings Found"
+            message={
+              filter === 'ALL'
+                ? "You haven't booked any movie tickets yet. Explore movies showing near you!"
+                : `No bookings matching the filter "${filter}".`
+            }
+            actionLabel="Browse Movies"
+            onAction={() => window.location.assign('/')}
+          />
+        </div>
+      ) : (
+        <div className="d-flex flex-column gap-3">
+          {filteredBookings.map((b) => {
+            const show = b.showId;
+            const movie = show?.movieId;
+            const theatre = show?.theatreId;
+            const screen = show?.screenId;
+            const isHold = b.status === 'AWAITING_PAYMENT';
+            const isConfirmed = b.status === 'CONFIRMED' || b.status === 'USED';
+            const showHasPassed = show?.startTime && new Date(show.startTime) < new Date();
+
+            return (
+              <div
+                key={b._id}
+                className="im-glass p-4 rounded-4 transition-all"
+                style={{ border: isHold ? '1px solid #f59e0b' : '1px solid var(--border-color)' }}
+              >
+                <div className="row g-3 align-items-center">
+                  {/* Poster Thumbnail */}
+                  <div className="col-auto">
+                    <img
+                      src={movie?.posterUrl || 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=300'}
+                      alt={movie?.title}
+                      className="rounded-3 shadow"
+                      style={{ width: '80px', height: '115px', objectFit: 'cover' }}
+                    />
+                  </div>
+
+                  {/* Details */}
+                  <div className="col">
+                    <div className="d-flex flex-wrap align-items-center gap-2 mb-1">
+                      <h5 className="fw-bold m-0">{movie?.title || 'Movie'}</h5>
+                      <StatusBadge status={b.status} />
+                      <span className="badge bg-dark border border-secondary text-secondary small">
+                        Ref: {b.bookingCode}
+                      </span>
+                    </div>
+
+                    <div className="text-secondary small mb-2">
+                      <span>{theatre?.name}, {theatre?.city}</span> • <span>{screen?.name}</span> • <span>{show?.format} ({show?.language})</span>
+                    </div>
+
+                    <div className="text-light small fw-medium mb-2">
+                      {show?.startTime ? formatISTDateTime(show.startTime) : 'Show date unavailable'}
+                    </div>
+
+                    <div className="d-flex flex-wrap gap-2 align-items-center">
+                      <span className="text-secondary small">Seats:</span>
+                      {b.seats?.map((s) => (
+                        <span key={s.seatLabel} className="badge bg-secondary">
+                          {s.seatLabel}
+                        </span>
+                      ))}
+                      <span className="ms-2 fw-bold text-light">Total: {formatINR(b.total)}</span>
+                    </div>
+                  </div>
+
+                  {/* Action Buttons */}
+                  <div className="col-lg-auto d-flex flex-column gap-2">
+                    {isHold && (
+                      <Link
+                        to={`/checkout/${b._id}`}
+                        className="btn btn-warning btn-sm d-flex align-items-center justify-content-center gap-2"
+                      >
+                        <span>Resume Payment</span>
+                        <ArrowRight size={14} />
+                      </Link>
+                    )}
+
+                    {isConfirmed && (
+                      <Link
+                        to={`/ticket/${b._id}`}
+                        className="btn btn-outline-light btn-sm d-flex align-items-center justify-content-center gap-2"
+                      >
+                        <Ticket size={14} />
+                        <span>View E-Ticket</span>
+                      </Link>
+                    )}
+
+                    {isConfirmed && !showHasPassed && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-danger d-flex align-items-center justify-content-center gap-1"
+                        onClick={() => setCancelTarget(b)}
+                      >
+                        <XCircle size={14} />
+                        <span>Cancel Ticket</span>
+                      </Button>
+                    )}
+
+                    {isConfirmed && showHasPassed && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="d-flex align-items-center justify-content-center gap-1"
+                        onClick={() => setReviewTarget(b)}
+                      >
+                        <Star size={14} className="text-warning" />
+                        <span>Leave Review</span>
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Cancel Booking Confirm Dialog */}
+      <ConfirmDialog
+        isOpen={Boolean(cancelTarget)}
+        title="Cancel Booking & Request Refund"
+        message={
+          cancelTarget ? (
+            <div>
+              <p>
+                Are you sure you want to cancel your booking <strong>{cancelTarget.bookingCode}</strong>?
+              </p>
+              <div className="alert alert-warning p-3 small mb-0 d-flex gap-2">
+                <AlertTriangle size={18} className="flex-shrink-0" />
+                <div>
+                  <strong>Cancellation Policy:</strong>
+                  <ul className="m-0 ps-3 pt-1">
+                    <li>More than 2 hours before showtime: <strong>75% refund</strong> of seat price.</li>
+                    <li>Less than 2 hours before showtime: <strong>No refund</strong> allowed.</li>
+                    <li>Convenience fee is non-refundable.</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          ) : ''
+        }
+        confirmText="Confirm Cancellation"
+        cancelText="Nevermind"
+        variant="danger"
+        loading={cancelling}
+        onConfirm={handleConfirmCancel}
+        onCancel={() => setCancelTarget(null)}
+      />
+
+      {/* Review Modal */}
+      {reviewTarget && (
+        <Modal
+          isOpen={Boolean(reviewTarget)}
+          title={`Review ${reviewTarget.showId?.movieId?.title || 'Movie'}`}
+          onClose={() => setReviewTarget(null)}
+        >
+          <form onSubmit={handleSubmitReview}>
+            <div className="mb-3">
+              <label className="form-label text-secondary small fw-medium">Rating (1 to 5 Stars)</label>
+              <div className="d-flex gap-2">
+                {[1, 2, 3, 4, 5].map((s) => (
+                  <button
+                    key={s}
+                    type="button"
+                    onClick={() => setRating(s)}
+                    className="btn p-1"
+                    style={{ background: 'transparent', border: 'none' }}
+                  >
+                    <Star
+                      size={28}
+                      fill={s <= rating ? '#eab308' : 'none'}
+                      color={s <= rating ? '#eab308' : '#6b7280'}
+                    />
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="mb-3">
+              <label className="form-label text-secondary small fw-medium">Your Review</label>
+              <textarea
+                className="form-control"
+                rows={4}
+                required
+                minLength={5}
+                placeholder="Share your thoughts about the movie..."
+                value={comment}
+                onChange={(e) => setComment(e.target.value)}
+                style={{ background: '#121624', border: '1px solid #242c44', color: '#fff' }}
+              />
+            </div>
+
+            <div className="d-flex justify-content-end gap-2 pt-2">
+              <Button type="button" variant="outline" onClick={() => setReviewTarget(null)}>
+                Cancel
+              </Button>
+              <Button type="submit" variant="primary" loading={submittingReview}>
+                Submit Review
+              </Button>
+            </div>
+          </form>
+        </Modal>
+      )}
+    </div>
+  );
+}
