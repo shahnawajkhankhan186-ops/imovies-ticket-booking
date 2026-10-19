@@ -27,6 +27,7 @@ export default function TicketPage() {
   }, [bookingId]);
 
   useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
     fetchBooking();
   }, [fetchBooking]);
 
@@ -119,6 +120,29 @@ export default function TicketPage() {
         <div style={{ maxWidth: '780px', width: '100%' }}>
           <TicketPrintable booking={booking} />
         </div>
+      </div>
+
+      {/* Action Bar under Ticket */}
+      <div className="d-print-none d-flex flex-wrap justify-content-center gap-3 mt-4 pb-4">
+        <Button
+          variant="primary"
+          size="lg"
+          onClick={handlePrint}
+          className="d-flex align-items-center gap-2 px-4 shadow"
+        >
+          <Printer size={18} />
+          <span>Print / Download PDF Ticket</span>
+        </Button>
+
+        <Link to="/my-bookings" className="btn btn-outline-light btn-lg d-flex align-items-center gap-2 px-4">
+          <Calendar size={18} />
+          <span>My Bookings</span>
+        </Link>
+
+        <Link to="/" className="btn btn-outline-secondary btn-lg d-flex align-items-center gap-2 px-4">
+          <Home size={18} />
+          <span>Book More Movies</span>
+        </Link>
       </div>
     </div>
   );
