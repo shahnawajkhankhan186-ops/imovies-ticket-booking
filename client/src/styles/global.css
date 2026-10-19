@@ -68,16 +68,34 @@ a {
   background: var(--text-dim);
 }
 
+/* High-Contrast Printable Ticket Styles */
+.ticket-card {
+  background: #ffffff !important;
+  color: #0f172a !important;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.4), 0 4px 6px -2px rgba(0, 0, 0, 0.2);
+}
+
+.ticket-card * {
+  color-scheme: light;
+}
+
 /* Print Styles for Tickets */
 @media print {
   body {
     background: #ffffff !important;
     color: #000000 !important;
   }
-  .no-print {
+  nav, footer, .d-print-none, .no-print {
     display: none !important;
   }
-  .print-only {
-    display: block !important;
+  .ticket-card {
+    border: 1px solid #cbd5e1 !important;
+    box-shadow: none !important;
+    max-width: 100% !important;
+    margin: 0 auto !important;
+    padding: 1.5rem !important;
+    page-break-inside: avoid;
   }
 }
+
