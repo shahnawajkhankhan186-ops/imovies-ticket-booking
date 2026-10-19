@@ -60,19 +60,27 @@ export default function AdminCouponsPage() {
     setSaving(true);
     try {
       const isFlat = formData.discountType === 'FLAT';
+      const minAmountPaise = Math.round(Number(formData.minOrderAmount || 0) * 100);
+      const maxDiscountPaise = formData.maxDiscountAmount
+        ? Math.round(Number(formData.maxDiscountAmount) * 100)
+        : undefined;
+      const usageLimit = Number(formData.maxUses) || 1000;
+
       const payload = {
         code: formData.code.trim().toUpperCase(),
-        discountType: formData.discountType,
+        discountType: formData.discountType === 'PERCENTAGE' ? 'PERCENT' : formData.discountType,
         // Flat discount in paise, percentage discount as plain integer percentage
         discountValue: isFlat
           ? Math.round(Number(formData.discountValue) * 100)
           : Number(formData.discountValue),
-        minOrderAmount: Math.round(Number(formData.minOrderAmount) * 100),
-        maxDiscountAmount: formData.maxDiscountAmount
-          ? Math.round(Number(formData.maxDiscountAmount) * 100)
-          : undefined,
+        minAmount: minAmountPaise,
+        minOrderAmount: minAmountPaise,
+        maxDiscount: maxDiscountPaise,
+        maxDiscountAmount: maxDiscountPaise,
+        validFrom: new Date(),
         validUntil: new Date(formData.validUntil),
-        maxUses: Number(formData.maxUses) || 100,
+        usageLimit,
+        maxUses: usageLimit,
         isActive: formData.isActive,
       };
 
@@ -156,16 +164,16 @@ export default function AdminCouponsPage() {
                             : `${c.discountValue}% OFF`}
                         </span>
                       </td>
-                      <td className="text-secondary small">{formatINR(c.minOrderAmount)}</td>
+                      <td className="text-secondary small">{formatINR(c.minAmount ?? c.minOrderAmount ?? 0)}</td>
                       <td className="text-secondary small">
-                        {c.maxDiscountAmount ? formatINR(c.maxDiscountAmount) : 'No cap'}
+                        {(c.maxDiscount ?? c.maxDiscountAmount) ? formatINR(c.maxDiscount ?? c.maxDiscountAmount) : 'No cap'}
                       </td>
                       <td className="text-secondary small">
                         {new Date(c.validUntil).toLocaleDateString()}
                       </td>
                       <td>
                         <span className="text-light fw-medium">
-                          {c.usedCount} / {c.maxUses || '∞'}
+                          {c.usedCount || 0} / {(c.usageLimit ?? c.maxUses) || '∞'}
                         </span>
                       </td>
                       <td>

@@ -12,7 +12,7 @@ const couponSchema = new mongoose.Schema(
     },
     discountType: {
       type: String,
-      enum: Object.values(COUPON_TYPE),
+      enum: [...Object.values(COUPON_TYPE), 'PERCENTAGE'],
       required: true,
     },
     discountValue: {
@@ -31,7 +31,7 @@ const couponSchema = new mongoose.Schema(
     },
     validFrom: {
       type: Date,
-      required: true,
+      default: Date.now,
     },
     validUntil: {
       type: Date,

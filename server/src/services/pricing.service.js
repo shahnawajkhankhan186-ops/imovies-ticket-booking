@@ -74,7 +74,7 @@ export async function calculateBookingPricing(seats, couponCode = null, userId =
     }
 
     // Calculate discount amount in paise
-    if (coupon.discountType === COUPON_TYPE.PERCENT) {
+    if (coupon.discountType === COUPON_TYPE.PERCENT || coupon.discountType === 'PERCENTAGE') {
       let calcDiscount = Math.round((subtotal * coupon.discountValue) / 100);
       if (coupon.maxDiscount && calcDiscount > coupon.maxDiscount) {
         calcDiscount = coupon.maxDiscount;

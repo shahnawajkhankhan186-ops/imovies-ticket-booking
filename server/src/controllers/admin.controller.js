@@ -939,7 +939,23 @@ export async function getAdminCoupons(req, res, next) {
 
 export async function createCoupon(req, res, next) {
   try {
-    const coupon = await Coupon.create(req.body);
+    const data = { ...req.body };
+    if (data.code) data.code = data.code.trim().toUpperCase();
+    if (data.discountType === 'PERCENTAGE') data.discountType = COUPON_TYPE.PERCENT;
+    if (data.minOrderAmount !== undefined && data.minAmount === undefined) {
+      data.minAmount = data.minOrderAmount;
+    }
+    if (data.maxDiscountAmount !== undefined && data.maxDiscount === undefined) {
+      data.maxDiscount = data.maxDiscountAmount;
+    }
+    if (data.maxUses !== undefined && data.usageLimit === undefined) {
+      data.usageLimit = data.maxUses;
+    }
+    if (!data.validFrom) {
+      data.validFrom = new Date();
+    }
+
+    const coupon = await Coupon.create(data);
     await logAudit(req.user, 'CREATE', AUDIT_ENTITIES.COUPON, coupon._id, null, coupon.toObject(), req.ip);
     return res.status(201).json({ coupon });
   } catch (error) {
@@ -952,7 +968,20 @@ export async function updateCoupon(req, res, next) {
     const before = await Coupon.findById(req.params.id);
     if (!before) return res.status(404).json({ error: MESSAGES.RESOURCE_NOT_FOUND });
 
-    const after = await Coupon.findByIdAndUpdate(req.params.id, { $set: req.body }, { new: true, runValidators: true });
+    const data = { ...req.body };
+    if (data.code) data.code = data.code.trim().toUpperCase();
+    if (data.discountType === 'PERCENTAGE') data.discountType = COUPON_TYPE.PERCENT;
+    if (data.minOrderAmount !== undefined && data.minAmount === undefined) {
+      data.minAmount = data.minOrderAmount;
+    }
+    if (data.maxDiscountAmount !== undefined && data.maxDiscount === undefined) {
+      data.maxDiscount = data.maxDiscountAmount;
+    }
+    if (data.maxUses !== undefined && data.usageLimit === undefined) {
+      data.usageLimit = data.maxUses;
+    }
+
+    const after = await Coupon.findByIdAndUpdate(req.params.id, { $set: data }, { new: true, runValidators: true });
     await logAudit(req.user, 'UPDATE', AUDIT_ENTITIES.COUPON, after._id, before.toObject(), after.toObject(), req.ip);
     return res.status(200).json({ coupon: after });
   } catch (error) {
