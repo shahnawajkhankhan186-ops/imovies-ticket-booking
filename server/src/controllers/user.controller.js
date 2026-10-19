@@ -1,5 +1,7 @@
+import crypto from 'crypto';
 import { z } from 'zod';
 import mongoose from 'mongoose';
+import { env } from '../config/env.js';
 import { Booking } from '../models/Booking.js';
 import { Review } from '../models/Review.js';
 import { User } from '../models/User.js';
@@ -8,6 +10,7 @@ import { Payment } from '../models/Payment.js';
 import { Coupon } from '../models/Coupon.js';
 import { createSeatHold, releaseUserHold } from '../services/booking.service.js';
 import { cancelBookingUser } from '../services/refund.service.js';
+import { calculateBookingPricing } from '../services/pricing.service.js';
 import { BOOKING_STATUS, PAYMENT_STATUS, SEAT_STATUS } from '../constants/enums.js';
 import { MESSAGES } from '../constants/messages.js';
 import { razorpay } from '../config/razorpay.js';
@@ -80,17 +83,21 @@ export async function resumePayment(req, res, next) {
       });
     }
 
-    // Reuse or create Razorpay order if needed
+    // Create or reuse Razorpay order
     let orderId = booking.razorpayOrderId;
-    if (!orderId && razorpay) {
-      const order = await razorpay.orders.create({
-        amount: booking.total,
-        currency: 'INR',
-        receipt: booking.bookingCode,
-      });
-      orderId = order.id;
-      booking.razorpayOrderId = orderId;
-      await booking.save();
+    if (razorpay) {
+      try {
+        const order = await razorpay.orders.create({
+          amount: booking.total,
+          currency: 'INR',
+          receipt: booking.bookingCode,
+        });
+        orderId = order.id;
+        booking.razorpayOrderId = orderId;
+        await booking.save();
+      } catch (rzpErr) {
+        console.error('\x1b[31m[RAZORPAY ERROR]\x1b[0m Failed to create order:', rzpErr.message || rzpErr);
+      }
     }
 
     return res.status(200).json({
@@ -385,3 +392,163 @@ export async function getUserReviews(req, res, next) {
     next(error);
   }
 }
+
+export async function applyCouponToBooking(req, res, next) {
+  try {
+    const { couponCode } = req.body;
+    const booking = await Booking.findOne({
+      _id: req.params.id,
+      userId: req.user._id,
+      status: BOOKING_STATUS.AWAITING_PAYMENT,
+    });
+
+    if (!booking) {
+      return res.status(404).json({
+        error: MESSAGES.BOOKING_NOT_FOUND,
+      });
+    }
+
+    if (new Date(booking.holdExpiresAt) < new Date()) {
+      return res.status(409).json({
+        error: MESSAGES.HOLD_EXPIRED,
+        code: 'HOLD_EXPIRED',
+      });
+    }
+
+    const pricing = await calculateBookingPricing(
+      booking.seats,
+      couponCode || null,
+      req.user._id
+    );
+
+    booking.couponCode = couponCode && couponCode.trim() !== '' ? couponCode.trim().toUpperCase() : undefined;
+    booking.subtotal = pricing.subtotal;
+    booking.discount = pricing.discount;
+    booking.convenienceFee = pricing.convenienceFee;
+    booking.total = pricing.total;
+    await booking.save();
+
+    const populated = await Booking.findById(booking._id)
+      .populate('showId')
+      .populate({
+        path: 'showId',
+        populate: [
+          { path: 'movieId' },
+          { path: 'theatreId' },
+          { path: 'screenId' },
+        ],
+      });
+
+    return res.status(200).json({
+      message: 'Coupon applied successfully',
+      booking: populated,
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function verifyRazorpayPayment(req, res, next) {
+  try {
+    const { razorpayPaymentId, razorpayOrderId, razorpaySignature } = req.body;
+    const booking = await Booking.findOne({
+      _id: req.params.id,
+      userId: req.user._id,
+      status: BOOKING_STATUS.AWAITING_PAYMENT,
+    });
+
+    if (!booking) {
+      return res.status(404).json({ error: MESSAGES.BOOKING_NOT_FOUND });
+    }
+
+    if (new Date(booking.holdExpiresAt) < new Date()) {
+      return res.status(409).json({ error: MESSAGES.HOLD_EXPIRED, code: 'HOLD_EXPIRED' });
+    }
+
+    // 1. Verify Razorpay HMAC signature if secret is configured
+    if (env.RAZORPAY_KEY_SECRET && razorpaySignature) {
+      const text = `${razorpayOrderId}|${razorpayPaymentId}`;
+      const expectedSignature = crypto
+        .createHmac('sha256', env.RAZORPAY_KEY_SECRET)
+        .update(text)
+        .digest('hex');
+
+      if (expectedSignature !== razorpaySignature) {
+        return res.status(400).json({ error: 'Invalid Razorpay payment signature.' });
+      }
+    }
+
+    // 2. Atomic confirmation in MongoDB transaction
+    const session = await mongoose.startSession();
+    session.startTransaction();
+
+    try {
+      const now = new Date();
+      const seatLabels = booking.seats.map((s) => s.seatLabel);
+
+      booking.status = BOOKING_STATUS.CONFIRMED;
+      booking.paymentStatus = PAYMENT_STATUS.SUCCESS;
+      booking.razorpayPaymentId = razorpayPaymentId;
+      await booking.save({ session });
+
+      await ShowSeat.updateMany(
+        { showId: booking.showId, seatLabel: { $in: seatLabels } },
+        {
+          $set: {
+            status: SEAT_STATUS.BOOKED,
+            bookingId: booking._id,
+            heldBy: booking.userId,
+            holdExpiresAt: undefined,
+          },
+        },
+        { session }
+      );
+
+      await Payment.create(
+        [
+          {
+            bookingId: booking._id,
+            userId: booking.userId,
+            razorpayOrderId: razorpayOrderId || booking.razorpayOrderId || `order_${booking.bookingCode}`,
+            razorpayPaymentId: razorpayPaymentId,
+            amount: booking.total,
+            method: 'razorpay_modal',
+            status: PAYMENT_STATUS.SUCCESS,
+            paidAt: now,
+          },
+        ],
+        { session }
+      );
+
+      if (booking.couponCode) {
+        await Coupon.updateOne(
+          { code: booking.couponCode },
+          { $inc: { usedCount: 1 } },
+          { session }
+        );
+      }
+
+      await session.commitTransaction();
+
+      // Emit socket event for real-time seat booked
+      emitToShowRoom(booking.showId.toString(), 'SEATS_BOOKED', {
+        seatLabels,
+        bookingId: booking._id,
+      });
+
+      return res.status(200).json({
+        message: 'Payment verified successfully. Booking confirmed.',
+        bookingId: booking._id,
+      });
+    } catch (txErr) {
+      await session.abortTransaction();
+      throw txErr;
+    } finally {
+      session.endSession();
+    }
+  } catch (error) {
+    next(error);
+  }
+}
+
+

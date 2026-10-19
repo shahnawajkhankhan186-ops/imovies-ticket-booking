@@ -127,6 +127,7 @@ export default function AdminShowsPage() {
         format,
         language,
         pricing: {
+          RECLINER: Math.round(Number(priceVip) * 100),
           VIP: Math.round(Number(priceVip) * 100),
           PREMIUM: Math.round(Number(pricePremium) * 100),
           REGULAR: Math.round(Number(priceRegular) * 100),
@@ -267,7 +268,7 @@ export default function AdminShowsPage() {
                     </td>
                     <td>
                       <div className="small">
-                        <span className="text-danger fw-semibold">VIP: {formatINR(s.pricing?.VIP || 40000)}</span> •{' '}
+                        <span className="text-danger fw-semibold">REC: {formatINR(s.pricing?.RECLINER || s.pricing?.VIP || 40000)}</span> •{' '}
                         <span className="text-warning fw-semibold">PREM: {formatINR(s.pricing?.PREMIUM || 30000)}</span> •{' '}
                         <span className="text-info fw-semibold">REG: {formatINR(s.pricing?.REGULAR || 20000)}</span>
                       </div>
@@ -405,7 +406,7 @@ export default function AdminShowsPage() {
                   <div className="col-4">
                     <Input
                       type="number"
-                      label="VIP Row (₹)"
+                      label="RECLINER / VIP Row (₹)"
                       value={priceVip}
                       onChange={(e) => setPriceVip(e.target.value)}
                       required

@@ -6,6 +6,7 @@ import Button from '../../components/ui/Button';
 import AlertBanner from '../../components/ui/AlertBanner';
 import { Film } from 'lucide-react';
 import toast from 'react-hot-toast';
+import GoogleSignInButton from '../../components/auth/GoogleSignInButton';
 
 export default function RegisterPage() {
   const navigate = useNavigate();
@@ -116,6 +117,14 @@ export default function RegisterPage() {
             Create Account
           </Button>
         </form>
+
+        <div className="d-flex align-items-center gap-3 my-3">
+          <div style={{ flex: 1, height: '1px', backgroundColor: 'var(--border-color)' }} />
+          <span className="text-secondary small fw-medium">OR</span>
+          <div style={{ flex: 1, height: '1px', backgroundColor: 'var(--border-color)' }} />
+        </div>
+
+        <GoogleSignInButton label="Sign up with Google" />
 
         <div className="text-center mt-4 text-secondary small">
           Already have an account?{' '}

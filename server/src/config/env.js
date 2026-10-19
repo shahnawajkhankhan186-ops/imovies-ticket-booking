@@ -34,6 +34,7 @@ export const env = {
   RAZORPAY_KEY_ID: process.env.RAZORPAY_KEY_ID || '',
   RAZORPAY_KEY_SECRET: process.env.RAZORPAY_KEY_SECRET || '',
   RAZORPAY_WEBHOOK_SECRET: process.env.RAZORPAY_WEBHOOK_SECRET || '',
+  GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID || '',
   HOLD_MINUTES: parseInt(process.env.HOLD_MINUTES || '7', 10),
   CONVENIENCE_FEE_PERCENT: parseInt(process.env.CONVENIENCE_FEE_PERCENT || '5', 10),
   MAX_SEATS_PER_BOOKING: parseInt(process.env.MAX_SEATS_PER_BOOKING || '8', 10),

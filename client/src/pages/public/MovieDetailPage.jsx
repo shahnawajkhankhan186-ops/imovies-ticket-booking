@@ -71,6 +71,10 @@ export default function MovieDetailPage() {
                 alt={movie.title}
                 className="img-fluid rounded-4 shadow-lg border border-secondary"
                 style={{ maxHeight: '380px', width: 'auto', aspectRatio: '2/3', objectFit: 'cover' }}
+                onError={(e) => {
+                  e.currentTarget.onerror = null;
+                  e.currentTarget.src = 'https://images.unsplash.com/photo-1635805737707-575885ab0820?w=600&auto=format&fit=crop&q=80';
+                }}
               />
             </div>
 

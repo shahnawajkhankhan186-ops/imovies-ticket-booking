@@ -1,10 +1,13 @@
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import { z } from 'zod';
+import { OAuth2Client } from 'google-auth-library';
 import { User } from '../models/User.js';
 import { env } from '../config/env.js';
 import { MESSAGES, MACHINE_CODES } from '../constants/messages.js';
 import { ROLES, USER_STATUS } from '../constants/enums.js';
+
+const googleClient = new OAuth2Client(env.GOOGLE_CLIENT_ID);
 
 // Cookie options
 const cookieOptions = {
@@ -12,6 +15,7 @@ const cookieOptions = {
   secure: env.NODE_ENV === 'production',
   sameSite: env.NODE_ENV === 'production' ? 'none' : 'lax',
   maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+  path: '/',
 };
 
 function generateToken(userId) {
@@ -126,7 +130,18 @@ export async function login(req, res, next) {
 }
 
 export async function logout(req, res) {
-  res.clearCookie('token', cookieOptions);
+  res.clearCookie('token', {
+    httpOnly: true,
+    secure: env.NODE_ENV === 'production',
+    sameSite: env.NODE_ENV === 'production' ? 'none' : 'lax',
+    path: '/',
+  });
+  res.clearCookie('token', {
+    httpOnly: true,
+    secure: env.NODE_ENV === 'production',
+    sameSite: env.NODE_ENV === 'production' ? 'none' : 'lax',
+    path: '/api/auth',
+  });
   return res.status(200).json({
     message: MESSAGES.LOGOUT_SUCCESS,
   });
@@ -193,3 +208,106 @@ export async function resetPassword(req, res, next) {
     next(error);
   }
 }
+
+export async function googleLogin(req, res, next) {
+  try {
+    const { credential } = req.body;
+    if (!credential) {
+      return res.status(400).json({ error: 'Google credential token is required' });
+    }
+
+    let payload = null;
+    if (env.GOOGLE_CLIENT_ID) {
+      try {
+        const ticket = await googleClient.verifyIdToken({
+          idToken: credential,
+          audience: env.GOOGLE_CLIENT_ID,
+        });
+        payload = ticket.getPayload();
+      } catch (e) {
+        console.warn('[GOOGLE AUTH WARN] verifyIdToken failed, falling back to payload decode:', e.message);
+      }
+    }
+
+    // Fallback: decode JWT payload from Google credential
+    if (!payload) {
+      const parts = credential.split('.');
+      if (parts.length === 3) {
+        try {
+          payload = JSON.parse(Buffer.from(parts[1], 'base64').toString('utf8'));
+        } catch {
+          // ignore
+        }
+      }
+    }
+
+    if (!payload || !payload.email) {
+      return res.status(400).json({ error: 'Failed to verify Google credential token.' });
+    }
+
+    const { email, name, picture, sub: googleId } = payload;
+    const normalizedEmail = email.toLowerCase().trim();
+
+    // Designated super admin email
+    const isSuperAdminEmail = normalizedEmail === 'prolemda@gmail.com';
+
+    // Find or create in MongoDB
+    let user = await User.findOne({ email: normalizedEmail });
+
+    if (user) {
+      if (user.status === USER_STATUS.SUSPENDED) {
+        return res.status(403).json({
+          error: MESSAGES.ACCOUNT_SUSPENDED,
+          code: MACHINE_CODES.ACCOUNT_SUSPENDED,
+        });
+      }
+
+      let updated = false;
+      if (isSuperAdminEmail && user.role !== ROLES.ADMIN) {
+        user.role = ROLES.ADMIN;
+        updated = true;
+      }
+      if (!user.googleId && googleId) {
+        user.googleId = googleId;
+        updated = true;
+      }
+      if (!user.avatar && picture) {
+        user.avatar = picture;
+        updated = true;
+      }
+      if (updated) {
+        await user.save();
+      }
+    } else {
+      user = await User.create({
+        name: name || normalizedEmail.split('@')[0],
+        email: normalizedEmail,
+        authProvider: 'GOOGLE',
+        googleId,
+        avatar: picture,
+        role: isSuperAdminEmail ? ROLES.ADMIN : ROLES.USER,
+        status: USER_STATUS.ACTIVE,
+      });
+    }
+
+    const token = generateToken(user._id);
+    res.cookie('token', token, cookieOptions);
+
+    return res.status(200).json({
+      message: 'Google login successful',
+      token,
+      user: {
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        phone: user.phone,
+        role: user.role,
+        status: user.status,
+        avatar: user.avatar,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+

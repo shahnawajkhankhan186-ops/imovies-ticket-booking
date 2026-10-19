@@ -13,7 +13,8 @@ import AlertBanner from '../../components/ui/AlertBanner';
 import ConfirmDialog from '../../components/ui/ConfirmDialog';
 
 export default function SeatSelectionPage() {
-  const { id: showId } = useParams();
+  const params = useParams();
+  const showId = params.showId || params.id;
   const navigate = useNavigate();
   const { user } = useAuth();
 
@@ -24,11 +25,29 @@ export default function SeatSelectionPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
 
+  // Restore pending seats if returning after 1-click login
+  useEffect(() => {
+    if (!showId) return;
+    try {
+      const saved = sessionStorage.getItem(`pendingSeats_${showId}`);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setSelectedSeatLabels(parsed);
+          sessionStorage.removeItem(`pendingSeats_${showId}`);
+        }
+      }
+    } catch {
+      // ignore
+    }
+  }, [showId]);
+
   // Unpaid hold dialog state if user already has an active hold
   const [unpaidHoldDialog, setUnpaidHoldDialog] = useState(null);
 
   // Load show and seat availability
   const loadShowSeats = useCallback(async () => {
+    if (!showId) return;
     try {
       const res = await api.get(`/public/shows/${showId}/seats`);
       setShowData(res.data.show);
@@ -92,7 +111,11 @@ export default function SeatSelectionPage() {
   // Proceed to Hold and Checkout
   const handleProceedToPay = async () => {
     if (!user) {
-      // Direct user to login, preserving destination
+      try {
+        sessionStorage.setItem(`pendingSeats_${showId}`, JSON.stringify(selectedSeatLabels));
+      } catch {
+        // ignore
+      }
       navigate('/login', { state: { from: `/shows/${showId}/seats` } });
       return;
     }

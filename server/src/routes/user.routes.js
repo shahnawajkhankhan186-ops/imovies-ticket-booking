@@ -4,6 +4,8 @@ import {
   releaseHold,
   resumePayment,
   testPayBooking,
+  verifyRazorpayPayment,
+  applyCouponToBooking,
   getUserBookings,
   getBookingById,
   cancelBooking,
@@ -30,6 +32,8 @@ router.post('/bookings/hold', holdLimiter, validate(holdSeatsSchema), holdSeats)
 router.post('/bookings/:id/release', releaseHold);
 router.post('/bookings/:id/pay', resumePayment);
 router.post('/bookings/:id/test-pay', testPayBooking);
+router.post('/bookings/:id/verify-payment', verifyRazorpayPayment);
+router.post('/bookings/:id/apply-coupon', applyCouponToBooking);
 router.get('/bookings', getUserBookings);
 router.get('/bookings/:id', getBookingById);
 router.post('/bookings/:id/cancel', cancelBooking);

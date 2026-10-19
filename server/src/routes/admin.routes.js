@@ -25,6 +25,7 @@ import {
   getAdminRefunds,
   getAdminUsers,
   updateUserStatus,
+  createOrPromoteAdmin,
   getAdminCoupons,
   createCoupon,
   updateCoupon,
@@ -83,6 +84,7 @@ router.get('/refunds', getAdminRefunds);
 
 // Users
 router.get('/users', getAdminUsers);
+router.post('/users/admin', createOrPromoteAdmin);
 router.patch('/users/:id', updateUserStatus);
 
 // Coupons

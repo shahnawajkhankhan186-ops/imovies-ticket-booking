@@ -46,6 +46,11 @@ app.use(
 app.use(express.urlencoded({ extended: true, limit: '2mb' }));
 app.use(cookieParser());
 
+// Root redirect to Client
+app.get('/', (req, res) => {
+  res.redirect(env.CLIENT_URL);
+});
+
 // Base Routes
 app.use('/api', healthRoutes);
 app.use('/api/auth', authRoutes);

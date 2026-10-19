@@ -4,11 +4,24 @@ import api from '../../lib/api';
 import Input from '../../components/ui/Input';
 import Button from '../../components/ui/Button';
 import LoadingSpinner from '../../components/ui/LoadingSpinner';
-import { User, Lock, Phone, Mail, Shield, Star, Calendar } from 'lucide-react';
+import { User, Lock, Phone, Mail, Shield, Star, Calendar, LogOut } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { useNavigate } from 'react-router-dom';
 
 export default function ProfilePage() {
-  const { user, refreshUser } = useAuth();
+  const { user, refreshUser, logout } = useAuth();
+  const navigate = useNavigate();
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      toast.success('Signed out successfully');
+      navigate('/');
+    } catch {
+      toast.success('Signed out');
+      navigate('/');
+    }
+  };
 
   // Profile Form state
   const [name, setName] = useState('');
@@ -115,19 +128,39 @@ export default function ProfilePage() {
         <div className="col-lg-6">
           <div className="im-glass p-4 rounded-4 mb-4">
             <div className="d-flex align-items-center gap-3 mb-4">
-              <div
-                className="rounded-circle d-flex align-items-center justify-content-center text-white fw-bold fs-3 shadow"
-                style={{ width: '64px', height: '64px', background: 'var(--primary-gradient)' }}
-              >
-                {user.name?.charAt(0)?.toUpperCase() || 'U'}
-              </div>
-              <div>
-                <h4 className="fw-bold m-0">{user.name}</h4>
-                <div className="text-secondary small d-flex align-items-center gap-2">
+              {user.avatar ? (
+                <img
+                  src={user.avatar}
+                  alt={user.name}
+                  className="rounded-circle shadow"
+                  style={{ width: '64px', height: '64px', objectFit: 'cover' }}
+                  referrerPolicy="no-referrer"
+                />
+              ) : (
+                <div
+                  className="rounded-circle d-flex align-items-center justify-content-center text-white fw-bold fs-3 shadow"
+                  style={{ width: '64px', height: '64px', background: 'var(--primary-gradient)' }}
+                >
+                  {user.name?.charAt(0)?.toUpperCase() || 'U'}
+                </div>
+              )}
+              <div className="flex-grow-1">
+                <div className="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                  <h4 className="fw-bold m-0">{user.name}</h4>
+                  <button
+                    type="button"
+                    onClick={handleLogout}
+                    className="btn btn-sm btn-outline-danger d-inline-flex align-items-center gap-1 rounded-pill px-3"
+                  >
+                    <LogOut size={14} />
+                    <span>Sign Out</span>
+                  </button>
+                </div>
+                <div className="text-secondary small d-flex align-items-center gap-2 mt-1">
                   <Mail size={14} />
                   <span>{user.email}</span>
                 </div>
-                <div className="mt-1 d-flex gap-2">
+                <div className="mt-2 d-flex gap-2">
                   <span className="badge bg-danger text-uppercase" style={{ fontSize: '0.65rem' }}>
                     {user.role}
                   </span>

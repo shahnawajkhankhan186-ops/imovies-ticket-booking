@@ -61,7 +61,7 @@ export default function AdminScreensPage() {
 
   const handleOpenEdit = (s) => {
     setEditingScreen(s);
-    setTheatreId(s.theatreId?._id || s.theatreId);
+    setTheatreId(s.theatreId?._id || s.theatreId || theatres[0]?._id || '');
     setName(s.name);
     setSoundSystem(s.soundSystem || 'Dolby Atmos 7.1');
     setModalOpen(true);
@@ -78,21 +78,34 @@ export default function AdminScreensPage() {
         });
         toast.success('Screen updated successfully');
       } else {
-        // Default standard 6x10 layout
-        const defaultRows = [
-          { rowLabel: 'A', category: 'VIP', seats: Array.from({ length: 10 }, (_, i) => ({ seatNumber: i + 1, isAisle: false })) },
-          { rowLabel: 'B', category: 'PREMIUM', seats: Array.from({ length: 10 }, (_, i) => ({ seatNumber: i + 1, isAisle: false })) },
-          { rowLabel: 'C', category: 'PREMIUM', seats: Array.from({ length: 10 }, (_, i) => ({ seatNumber: i + 1, isAisle: false })) },
-          { rowLabel: 'D', category: 'REGULAR', seats: Array.from({ length: 10 }, (_, i) => ({ seatNumber: i + 1, isAisle: false })) },
-          { rowLabel: 'E', category: 'REGULAR', seats: Array.from({ length: 10 }, (_, i) => ({ seatNumber: i + 1, isAisle: false })) },
-          { rowLabel: 'F', category: 'REGULAR', seats: Array.from({ length: 10 }, (_, i) => ({ seatNumber: i + 1, isAisle: false })) },
-        ];
+        // Generate a standard 8x12 auditorium layout (80 seats, 2 aisles)
+        const rowLetters = 'ABCDEFGH';
+        const defaultCells = [];
+        let totalSeatsCount = 0;
+        for (let r = 1; r <= 8; r++) {
+          const rowChar = rowLetters[r - 1] || `R${r}`;
+          const category = r <= 2 ? 'RECLINER' : r <= 5 ? 'PREMIUM' : 'REGULAR';
+          for (let c = 1; c <= 12; c++) {
+            if (c === 4 || c === 9) {
+              defaultCells.push({ row: r, col: c, label: '', category: 'NONE', kind: 'AISLE' });
+            } else {
+              totalSeatsCount++;
+              defaultCells.push({ row: r, col: c, label: `${rowChar}${c}`, category, kind: 'SEAT' });
+            }
+          }
+        }
 
         await api.post('/admin/screens', {
           theatreId,
           name: name.trim(),
           soundSystem,
-          layout: { rows: defaultRows },
+          totalSeats: totalSeatsCount,
+          layout: { rows: 8, cols: 12, cells: defaultCells },
+          categoryConfig: [
+            { category: 'RECLINER', defaultPricePaise: 40000 },
+            { category: 'PREMIUM', defaultPricePaise: 30000 },
+            { category: 'REGULAR', defaultPricePaise: 20000 },
+          ],
         });
         toast.success('Screen created successfully! You can now customize its seat layout.');
       }
@@ -110,8 +123,16 @@ export default function AdminScreensPage() {
     if (!layoutScreen) return;
     setSavingLayout(true);
     try {
+      const seatsCount =
+        typeof newLayout.totalSeats === 'number'
+          ? newLayout.totalSeats
+          : Array.isArray(newLayout.cells)
+          ? newLayout.cells.filter((c) => c.kind === 'SEAT').length
+          : layoutScreen.totalSeats || 60;
+
       await api.put(`/admin/screens/${layoutScreen._id}`, {
         layout: newLayout,
+        totalSeats: seatsCount,
       });
       toast.success('Auditorium seat layout updated successfully!');
       setLayoutScreen(null);
@@ -181,10 +202,14 @@ export default function AdminScreensPage() {
               </thead>
               <tbody>
                 {screens.map((s) => {
-                  const totalSeats = s.layout?.rows?.reduce(
-                    (acc, r) => acc + (r.seats?.length || 0),
-                    0
-                  ) || s.totalSeats || 60;
+                  const totalSeats =
+                    typeof s.totalSeats === 'number'
+                      ? s.totalSeats
+                      : Array.isArray(s.layout?.cells)
+                      ? s.layout.cells.filter((c) => c.kind === 'SEAT').length
+                      : Array.isArray(s.layout?.rows)
+                      ? s.layout.rows.reduce((acc, r) => acc + (r.seats?.length || 0), 0)
+                      : 60;
 
                   return (
                     <tr key={s._id}>
@@ -306,6 +331,7 @@ export default function AdminScreensPage() {
           size="xl"
         >
           <LayoutBuilder
+            key={layoutScreen._id}
             initialLayout={layoutScreen.layout}
             onSave={handleSaveLayout}
             loading={savingLayout}

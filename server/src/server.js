@@ -32,6 +32,13 @@ const shutdown = async () => {
 
 process.on('SIGTERM', shutdown);
 process.on('SIGINT', shutdown);
+process.once('SIGUSR2', async () => {
+  stopHoldExpirationCron();
+  server.close(async () => {
+    await disconnectDB();
+    process.kill(process.pid, 'SIGUSR2');
+  });
+});
 
 if (process.env.NODE_ENV !== 'test') {
   startServer();

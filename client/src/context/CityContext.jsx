@@ -13,9 +13,7 @@ export function CityProvider({ children }) {
         const res = await api.get('/public/cities');
         if (res.data.cities && res.data.cities.length > 0) {
           setAvailableCities(res.data.cities);
-          if (!res.data.cities.includes(city)) {
-            setCity(res.data.cities[0]);
-          }
+          setCity((prevCity) => (res.data.cities.includes(prevCity) ? prevCity : res.data.cities[0]));
         }
       } catch (err) {
         console.warn('Failed to load cities:', err.message);

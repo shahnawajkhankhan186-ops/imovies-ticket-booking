@@ -54,12 +54,14 @@ export default function AdminTheatresPage() {
 
   const handleOpenEdit = (t) => {
     setEditingTheatre(t);
+    const phone = typeof t.contact === 'string' ? t.contact : t.contact?.phone || '';
+    const email = typeof t.contact === 'object' ? t.contact?.email || '' : '';
     setFormData({
       name: t.name,
       city: t.city,
       address: t.address || '',
-      contactPhone: t.contact?.phone || '',
-      contactEmail: t.contact?.email || '',
+      contactPhone: phone,
+      contactEmail: email,
     });
     setModalOpen(true);
   };
@@ -72,11 +74,16 @@ export default function AdminTheatresPage() {
         name: formData.name.trim(),
         city: formData.city.trim(),
         address: formData.address.trim(),
-        contact: {
-          phone: formData.contactPhone.trim() || undefined,
-          email: formData.contactEmail.trim() || undefined,
-        },
       };
+
+      const phone = formData.contactPhone?.trim();
+      const email = formData.contactEmail?.trim();
+      if (phone || email) {
+        payload.contact = {
+          ...(phone && { phone }),
+          ...(email && { email }),
+        };
+      }
 
       if (editingTheatre) {
         await api.put(`/admin/theatres/${editingTheatre._id}`, payload);
@@ -161,16 +168,22 @@ export default function AdminTheatresPage() {
                     </td>
                     <td className="text-secondary small">{t.address}</td>
                     <td className="text-secondary small">
-                      {t.contact?.phone && (
+                      {typeof t.contact === 'string' && t.contact && (
+                        <div className="d-flex align-items-center gap-1">
+                          <Phone size={12} /> {t.contact}
+                        </div>
+                      )}
+                      {typeof t.contact === 'object' && t.contact?.phone && (
                         <div className="d-flex align-items-center gap-1">
                           <Phone size={12} /> {t.contact.phone}
                         </div>
                       )}
-                      {t.contact?.email && (
+                      {typeof t.contact === 'object' && t.contact?.email && (
                         <div className="d-flex align-items-center gap-1">
                           <Mail size={12} /> {t.contact.email}
                         </div>
                       )}
+                      {!t.contact && <span className="text-secondary opacity-50">—</span>}
                     </td>
                     <td className="text-end">
                       <div className="d-inline-flex gap-2">

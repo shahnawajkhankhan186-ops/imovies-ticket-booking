@@ -20,8 +20,7 @@ const theatreSchema = new mongoose.Schema(
       trim: true,
     },
     contact: {
-      type: String,
-      trim: true,
+      type: mongoose.Schema.Types.Mixed,
       default: undefined,
     },
     coordinates: {

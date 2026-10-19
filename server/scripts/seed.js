@@ -109,6 +109,14 @@ async function seed() {
       phone: '9999999999',
     },
     {
+      name: 'Prolemda Admin',
+      email: 'prolemda@gmail.com',
+      passwordHash: adminPasswordHash,
+      role: ROLES.ADMIN,
+      status: USER_STATUS.ACTIVE,
+      phone: '9893989398',
+    },
+    {
       name: 'Rahul Sharma',
       email: 'rahul@example.com',
       passwordHash: userPasswordHash,
@@ -329,7 +337,22 @@ async function seed() {
       languages: ['English', 'Hindi'],
       certificate: CERTIFICATES.UA,
       releaseDate: new Date('2025-12-19'),
-      status: MOVIE_STATUS.UPCOMING,
+      status: MOVIE_STATUS.NOW_SHOWING,
+    },
+    {
+      title: 'Jawan',
+      posterUrl: 'https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=600&auto=format&fit=crop&q=80',
+      bannerUrl: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=1600&auto=format&fit=crop&q=80',
+      trailerUrl: 'https://www.youtube.com/watch?v=MWOlnZSnXwk',
+      synopsis: 'A high-octane action thriller outlining the emotional journey of a man set out to correct the wrongs in society against formidable corrupt forces.',
+      cast: ['Shah Rukh Khan', 'Nayanthara', 'Vijay Sethupathi', 'Deepika Padukone'],
+      director: 'Atlee',
+      durationMinutes: 169,
+      genres: ['Action', 'Thriller'],
+      languages: ['Hindi', 'Tamil', 'Telugu'],
+      certificate: CERTIFICATES.UA,
+      releaseDate: new Date('2023-09-07'),
+      status: MOVIE_STATUS.NOW_SHOWING,
     },
     {
       title: 'Gladiator II',
@@ -375,12 +398,12 @@ async function seed() {
       const screen = seededScreens[sIdx];
       const theatre = seededTheatres.find((t) => t._id.equals(screen.theatreId));
 
-      // 2 shows per screen per day = 3 screens * 2 shows * 7 days = 42 shows!
-      const timesForThisScreen = sIdx % 2 === 0 ? [showTimes[0], showTimes[2]] : [showTimes[1], showTimes[3]];
+      // 4 shows per screen per day = 3 screens * 4 shows * 7 days = 84 shows!
+      const timesForThisScreen = showTimes;
 
       for (let tIdx = 0; tIdx < timesForThisScreen.length; tIdx++) {
         const timeStr = timesForThisScreen[tIdx];
-        const movieIndex = (dayOffset + sIdx + tIdx) % nowShowingMovies.length;
+        const movieIndex = (dayOffset * 4 + sIdx * 4 + tIdx) % nowShowingMovies.length;
         const movie = nowShowingMovies[movieIndex];
 
         const startInstant = createISTInstant(dateStr, timeStr);
@@ -430,13 +453,16 @@ async function seed() {
           }
         }
 
-        // Upsert ShowSeat inventory idempotently
-        for (const seat of seatDocs) {
-          await ShowSeat.findOneAndUpdate(
-            { showId: seat.showId, seatLabel: seat.seatLabel },
-            { $setOnInsert: seat },
-            { upsert: true }
-          );
+        // Upsert ShowSeat inventory idempotently in bulk
+        if (seatDocs.length > 0) {
+          const ops = seatDocs.map((seat) => ({
+            updateOne: {
+              filter: { showId: seat.showId, seatLabel: seat.seatLabel },
+              update: { $setOnInsert: seat },
+              upsert: true,
+            },
+          }));
+          await ShowSeat.bulkWrite(ops, { ordered: false });
         }
         seatInventoryCount += seatDocs.length;
       }
@@ -465,11 +491,11 @@ async function seed() {
       discountType: COUPON_TYPE.FLAT,
       discountValue: 10000, // ₹100 flat in paise
       maxDiscount: 10000,
-      minAmount: 35000, // min ₹350 in paise
+      minAmount: 0, // no minimum amount required
       validFrom: new Date('2024-01-01'),
       validUntil: new Date('2030-12-31'),
       usageLimit: 2000,
-      perUserLimit: 1,
+      perUserLimit: 10,
       isActive: true,
     },
     {

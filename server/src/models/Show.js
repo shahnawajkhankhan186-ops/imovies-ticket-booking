@@ -44,6 +44,7 @@ const showSchema = new mongoose.Schema(
       REGULAR: { type: Number, required: true, min: 0 }, // in paise
       PREMIUM: { type: Number, required: true, min: 0 }, // in paise
       RECLINER: { type: Number, required: true, min: 0 }, // in paise
+      VIP: { type: Number, default: undefined },
     },
     status: {
       type: String,

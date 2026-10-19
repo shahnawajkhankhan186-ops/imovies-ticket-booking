@@ -40,8 +40,13 @@ export async function getMovies(req, res, next) {
         status: SHOW_STATUS.SCHEDULED,
       }).select('movieId');
 
-      const movieIds = [...new Set(activeShows.map((s) => s.movieId.toString()))];
-      filter._id = { $in: movieIds };
+      const movieIdsWithShows = [...new Set(activeShows.map((s) => s.movieId.toString()))];
+      
+      // Also include any movies with status NOW_SHOWING so freshly added movies are never hidden!
+      const allNowShowing = await Movie.find({ status: MOVIE_STATUS.NOW_SHOWING }).select('_id');
+      const allNowShowingIds = allNowShowing.map((m) => m._id.toString());
+
+      filter._id = { $in: [...new Set([...movieIdsWithShows, ...allNowShowingIds])] };
     }
 
     const pageNum = Math.max(1, parseInt(page, 10));

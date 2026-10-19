@@ -9,7 +9,8 @@ import LoadingSpinner from '../../components/ui/LoadingSpinner';
 import EmptyState from '../../components/ui/EmptyState';
 
 export default function ShowSelectionPage() {
-  const { id } = useParams();
+  const params = useParams();
+  const id = params.id || params.movieId;
   const { city } = useCity();
 
   const [movie, setMovie] = useState(null);

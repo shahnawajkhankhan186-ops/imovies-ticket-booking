@@ -1,12 +1,13 @@
 import React from 'react';
 
-export default function LoadingSpinner({ text = 'Loading...', fullScreen = false }) {
+export default function LoadingSpinner({ text, message, fullScreen = false }) {
+  const displayText = message || text || 'Loading...';
   const content = (
     <div className="d-flex flex-column align-items-center justify-content-center p-5 text-center">
       <div className="spinner-border text-danger mb-3" style={{ width: '3rem', height: '3rem' }} role="status">
         <span className="visually-hidden">Loading...</span>
       </div>
-      <p className="text-secondary small fw-medium m-0">{text}</p>
+      <p className="text-secondary small fw-medium m-0">{displayText}</p>
     </div>
   );
 

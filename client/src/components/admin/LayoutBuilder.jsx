@@ -1,10 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Button from '../ui/Button';
 import { Layers } from 'lucide-react';
 
 const ROW_LETTERS = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
 
-export default function LayoutBuilder({ initialLayout, onSave }) {
+export default function LayoutBuilder({ initialLayout, onSave, loading = false }) {
   const [rows, setRows] = useState(initialLayout?.rows || 8);
   const [cols, setCols] = useState(initialLayout?.cols || 12);
   const [selectedTool, setSelectedTool] = useState('REGULAR'); // REGULAR, PREMIUM, RECLINER, AISLE, BLOCKED
@@ -38,6 +38,16 @@ export default function LayoutBuilder({ initialLayout, onSave }) {
   const [cells, setCells] = useState(() =>
     initializeCells(rows, cols, initialLayout?.cells || [])
   );
+
+  useEffect(() => {
+    if (initialLayout) {
+      const r = initialLayout.rows || 8;
+      const c = initialLayout.cols || 12;
+      setRows(r);
+      setCols(c);
+      setCells(initializeCells(r, c, initialLayout.cells || []));
+    }
+  }, [initialLayout]);
 
   const handleResize = (newRows, newCols) => {
     const r = Math.max(1, Math.min(20, newRows));
@@ -275,7 +285,7 @@ export default function LayoutBuilder({ initialLayout, onSave }) {
       </div>
 
       <div className="d-flex justify-content-end gap-2 mt-2">
-        <Button variant="primary" onClick={handleSave} icon={Layers}>
+        <Button variant="primary" onClick={handleSave} icon={Layers} loading={loading}>
           Save Layout Configuration
         </Button>
       </div>

@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import api from '../../lib/api';
 import { formatINR } from '../../lib/currency';
@@ -26,6 +26,8 @@ export default function CheckoutPage() {
   const [applyingCoupon, setApplyingCoupon] = useState(false);
   const [couponError, setCouponError] = useState(null);
 
+  const holdExpiredToastShown = useRef(false);
+
   const fetchBooking = useCallback(async () => {
     try {
       setLoading(true);
@@ -48,10 +50,13 @@ export default function CheckoutPage() {
     fetchBooking();
   }, [fetchBooking]);
 
-  const handleHoldExpired = () => {
-    toast.error('Seat hold expired. Seats have been released.');
+  const handleHoldExpired = useCallback(() => {
+    if (!holdExpiredToastShown.current) {
+      holdExpiredToastShown.current = true;
+      toast.error('Seat hold expired. Seats have been released.', { id: 'hold-expired-toast' });
+    }
     fetchBooking();
-  };
+  }, [fetchBooking]);
 
   const handleRelease = async () => {
     try {
@@ -74,22 +79,29 @@ export default function CheckoutPage() {
     setCouponError(null);
 
     try {
-      // Release current hold and re-hold with coupon to get authoritative server-side calculation
-      const showId = booking.showId._id;
-      const seatLabels = booking.seats.map((s) => s.seatLabel);
-
-      await api.post(`/user/bookings/${bookingId}/release`);
-      const holdRes = await api.post('/user/bookings/hold', {
-        showId,
-        seatLabels,
+      const res = await api.post(`/user/bookings/${bookingId}/apply-coupon`, {
         couponCode: couponCode.trim().toUpperCase(),
       });
-
-      toast.success(`Coupon applied! Saved ${formatINR(holdRes.data.booking.discount)}`);
-      navigate(`/checkout/${holdRes.data.booking._id}`, { replace: true });
+      setBooking(res.data.booking);
+      toast.success(`Coupon applied! Saved ${formatINR(res.data.booking.discount)}`);
     } catch (err) {
       setCouponError(err.message || 'Invalid or inapplicable coupon');
-      fetchBooking(); // refresh current booking state
+    } finally {
+      setApplyingCoupon(false);
+    }
+  };
+
+  const handleRemoveCoupon = async () => {
+    try {
+      setApplyingCoupon(true);
+      const res = await api.post(`/user/bookings/${bookingId}/apply-coupon`, {
+        couponCode: '',
+      });
+      setBooking(res.data.booking);
+      setCouponCode('');
+      toast.success('Coupon removed');
+    } catch (err) {
+      toast.error(err.message || 'Failed to remove coupon');
     } finally {
       setApplyingCoupon(false);
     }
@@ -131,26 +143,21 @@ export default function CheckoutPage() {
         description: `Booking #${bookingCode}`,
         order_id: orderId,
         handler: async function (response) {
-          toast.success('Payment authorized. Confirming booking...');
-          // Poll for confirmed booking
-          let attempts = 0;
-          const interval = setInterval(async () => {
-            attempts += 1;
-            try {
-              const checkRes = await api.get(`/user/bookings/${bookingId}`);
-              if (checkRes.data.booking.status === 'CONFIRMED') {
-                clearInterval(interval);
-                navigate(`/ticket/${bookingId}`, { replace: true });
-              }
-            } catch (pErr) {
-              // continue
-            }
-            if (attempts > 5) {
-              clearInterval(interval);
-              // Trigger test pay verification to ensure confirmation in dev
-              await handleSimulatePayment();
-            }
-          }, 1500);
+          toast.loading('Verifying Razorpay payment...', { id: 'payment-toast' });
+          try {
+            const verifyRes = await api.post(`/user/bookings/${bookingId}/verify-payment`, {
+              razorpayPaymentId: response.razorpay_payment_id,
+              razorpayOrderId: response.razorpay_order_id,
+              razorpaySignature: response.razorpay_signature,
+            });
+            toast.success('Payment verified! Ticket confirmed.', { id: 'payment-toast' });
+            navigate(`/ticket/${verifyRes.data.bookingId}`, { replace: true });
+          } catch (vErr) {
+            toast.error(vErr.message || 'Payment verification failed', { id: 'payment-toast' });
+            fetchBooking();
+          } finally {
+            setPaying(false);
+          }
         },
         theme: {
           color: '#e50914',
@@ -246,7 +253,11 @@ export default function CheckoutPage() {
 
         {booking.holdExpiresAt && (
           <div className="d-flex align-items-center gap-2">
-            <CountdownTimer expiresAt={booking.holdExpiresAt} onExpire={handleHoldExpired} />
+            <CountdownTimer
+              targetDate={booking.holdExpiresAt}
+              expiresAt={booking.holdExpiresAt}
+              onExpire={handleHoldExpired}
+            />
           </div>
         )}
       </div>
@@ -314,16 +325,24 @@ export default function CheckoutPage() {
 
             {booking.couponCode ? (
               <div className="p-3 rounded-3 d-flex align-items-center justify-content-between" style={{ background: 'rgba(34,197,94,0.1)', border: '1px solid #22c55e' }}>
-                <div>
-                  <span className="badge bg-success me-2">{booking.couponCode}</span>
-                  <span className="text-success small fw-medium">Coupon applied successfully!</span>
+                <div className="d-flex align-items-center gap-2">
+                  <span className="badge bg-success">{booking.couponCode}</span>
+                  <span className="text-success small fw-medium">Coupon applied! Saved {formatINR(booking.discount)}</span>
                 </div>
-                <span className="text-success fw-bold">-{formatINR(booking.discount)}</span>
+                <button
+                  type="button"
+                  onClick={handleRemoveCoupon}
+                  disabled={applyingCoupon}
+                  className="btn btn-sm btn-outline-danger py-0 px-2 small"
+                  style={{ fontSize: '11px' }}
+                >
+                  Remove
+                </button>
               </div>
             ) : (
               <form onSubmit={handleApplyCoupon} className="d-flex gap-2">
                 <Input
-                  placeholder="Enter code (e.g. WELCOME100, IMOVIES50)"
+                  placeholder="Enter code (e.g. FLAT100, WELCOME50)"
                   value={couponCode}
                   onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
                   error={couponError}
@@ -340,8 +359,22 @@ export default function CheckoutPage() {
               </form>
             )}
 
-            <div className="mt-2 text-secondary small">
-              Available coupons: <span className="text-light fw-medium">WELCOME100</span> (₹100 off), <span className="text-light fw-medium">IMOVIES50</span> (50% off up to ₹150)
+            <div className="mt-2 text-secondary small d-flex flex-wrap align-items-center gap-2">
+              <span>Available coupons:</span>
+              <button
+                type="button"
+                onClick={() => setCouponCode('FLAT100')}
+                className="btn btn-sm py-0 px-2 badge bg-dark border border-secondary text-light cursor-pointer text-decoration-none"
+              >
+                FLAT100 (₹100 off)
+              </button>
+              <button
+                type="button"
+                onClick={() => setCouponCode('WELCOME50')}
+                className="btn btn-sm py-0 px-2 badge bg-dark border border-secondary text-light cursor-pointer text-decoration-none"
+              >
+                WELCOME50 (50% off)
+              </button>
             </div>
           </div>
         </div>

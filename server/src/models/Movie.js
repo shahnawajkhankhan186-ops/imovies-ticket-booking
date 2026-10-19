@@ -26,7 +26,9 @@ const movieSchema = new mongoose.Schema(
     },
     synopsis: {
       type: String,
-      required: [true, 'Synopsis is required'],
+      default: function () {
+        return this?.title ? `${this.title} storyline summary.` : 'Movie synopsis';
+      },
       trim: true,
     },
     cast: {

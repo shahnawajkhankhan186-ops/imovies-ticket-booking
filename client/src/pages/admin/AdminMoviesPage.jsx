@@ -89,19 +89,21 @@ export default function AdminMoviesPage() {
     e.preventDefault();
     setSaving(true);
     try {
+      const title = formData.title?.trim() || '';
+      const synopsis = formData.synopsis?.trim() || `${title} - Now screening in theatres. Experience the epic cinematic journey with premium sound and visuals.`;
       const payload = {
-        title: formData.title.trim(),
-        synopsis: formData.synopsis.trim(),
-        posterUrl: formData.posterUrl.trim(),
-        bannerUrl: formData.bannerUrl.trim() || undefined,
-        trailerUrl: formData.trailerUrl.trim() || undefined,
-        durationMinutes: parseInt(formData.durationMinutes, 10),
-        releaseDate: new Date(formData.releaseDate),
-        genres: formData.genres.split(',').map((s) => s.trim()).filter(Boolean),
-        languages: formData.languages.split(',').map((s) => s.trim()).filter(Boolean),
-        formats: formData.formats.split(',').map((s) => s.trim()).filter(Boolean),
-        certificate: formData.certificate,
-        status: formData.status,
+        title,
+        synopsis,
+        posterUrl: formData.posterUrl?.trim() || '',
+        bannerUrl: formData.bannerUrl?.trim() || undefined,
+        trailerUrl: formData.trailerUrl?.trim() || undefined,
+        durationMinutes: parseInt(formData.durationMinutes, 10) || 120,
+        releaseDate: formData.releaseDate ? new Date(formData.releaseDate) : new Date(),
+        genres: (formData.genres || 'Action').split(',').map((s) => s.trim()).filter(Boolean),
+        languages: (formData.languages || 'Hindi, English').split(',').map((s) => s.trim()).filter(Boolean),
+        formats: (formData.formats || '2D, 3D').split(',').map((s) => s.trim()).filter(Boolean),
+        certificate: formData.certificate || 'UA',
+        status: formData.status || 'NOW_SHOWING',
       };
 
       if (editingMovie) {
@@ -216,6 +218,10 @@ export default function AdminMoviesPage() {
                           alt={m.title}
                           className="rounded-2 shadow"
                           style={{ width: '40px', height: '56px', objectFit: 'cover' }}
+                          onError={(e) => {
+                            e.currentTarget.onerror = null;
+                            e.currentTarget.src = 'https://images.unsplash.com/photo-1635805737707-575885ab0820?w=100';
+                          }}
                         />
                         <div>
                           <div className="fw-bold text-light d-flex align-items-center gap-2">
@@ -271,14 +277,14 @@ export default function AdminMoviesPage() {
         isOpen={modalOpen}
         title={editingMovie ? 'Edit Movie Details' : 'Add New Movie Title'}
         onClose={() => setModalOpen(false)}
-        size="lg"
+        maxWidth="720px"
       >
         <form onSubmit={handleSaveMovie}>
           <div className="row g-3">
             <div className="col-12 col-md-8">
               <Input
                 label="Movie Title"
-                placeholder="e.g. Inception"
+                placeholder="e.g. Spider-Man: No Way Home"
                 value={formData.title}
                 onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                 required
@@ -300,11 +306,13 @@ export default function AdminMoviesPage() {
             </div>
 
             <div className="col-12">
-              <label className="form-label text-secondary small fw-medium">Synopsis</label>
+              <label className="form-label text-secondary small fw-medium">
+                Storyline / Synopsis (Optional)
+              </label>
               <textarea
                 className="form-control"
                 rows={3}
-                placeholder="Enter storyline summary..."
+                placeholder="Enter storyline or summary (optional — will auto-generate if left blank)..."
                 value={formData.synopsis}
                 onChange={(e) => setFormData({ ...formData, synopsis: e.target.value })}
                 style={{ background: '#121624', border: '1px solid #242c44', color: '#fff' }}

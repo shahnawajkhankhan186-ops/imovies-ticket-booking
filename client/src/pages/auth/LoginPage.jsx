@@ -6,6 +6,7 @@ import Button from '../../components/ui/Button';
 import AlertBanner from '../../components/ui/AlertBanner';
 import { Film, Lock, Mail, UserCheck } from 'lucide-react';
 import toast from 'react-hot-toast';
+import GoogleSignInButton from '../../components/auth/GoogleSignInButton';
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -17,7 +18,10 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  const from = location.state?.from?.pathname || '/';
+  const from =
+    typeof location.state?.from === 'string'
+      ? location.state.from
+      : location.state?.from?.pathname || '/';
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -25,13 +29,13 @@ export default function LoginPage() {
     setError(null);
 
     try {
-      const user = await login({ email, password });
+      const user = await login(email, password);
       toast.success(`Welcome back, ${user.name}!`);
 
-      if (user.role === 'ADMIN' && from === '/') {
+      if (user.role === 'ADMIN' && (from === '/' || from === '/login')) {
         navigate('/admin/dashboard', { replace: true });
       } else {
-        navigate(from, { replace: true });
+        navigate(from === '/login' ? '/' : from, { replace: true });
       }
     } catch (err) {
       setError(err.message || 'Login failed. Please check your credentials.');
@@ -96,25 +100,25 @@ export default function LoginPage() {
           </Button>
         </form>
 
-        {/* Demo Fast Login Buttons */}
+        <div className="d-flex align-items-center gap-3 my-3">
+          <div style={{ flex: 1, height: '1px', backgroundColor: 'var(--border-color)' }} />
+          <span className="text-secondary small fw-medium">OR</span>
+          <div style={{ flex: 1, height: '1px', backgroundColor: 'var(--border-color)' }} />
+        </div>
+
+        <GoogleSignInButton label="Continue with Google" />
+
+        {/* Demo Fast Login Button (User Only) */}
         <div className="mt-4 pt-3 border-top" style={{ borderColor: 'var(--border-color)' }}>
-          <div className="text-secondary small text-center mb-2">⚡ Quick-Fill Demo Accounts:</div>
-          <div className="d-flex gap-2">
-            <button
-              type="button"
-              onClick={() => fillCredentials('admin@imovies.com', 'Admin@123')}
-              className="btn btn-sm btn-outline-danger flex-grow-1 d-flex align-items-center justify-content-center gap-1"
-            >
-              <UserCheck size={14} />
-              <span>Admin Demo</span>
-            </button>
+          <div className="text-secondary small text-center mb-2">⚡ Quick-Fill Demo Account:</div>
+          <div className="d-flex justify-content-center">
             <button
               type="button"
               onClick={() => fillCredentials('rahul@example.com', 'User@123')}
-              className="btn btn-sm btn-outline-secondary flex-grow-1 d-flex align-items-center justify-content-center gap-1"
+              className="btn btn-sm btn-outline-secondary w-100 d-flex align-items-center justify-content-center gap-1"
             >
               <UserCheck size={14} />
-              <span>User Demo</span>
+              <span>User Demo (rahul@example.com)</span>
             </button>
           </div>
         </div>

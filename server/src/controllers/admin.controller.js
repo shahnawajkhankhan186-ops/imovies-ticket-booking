@@ -16,8 +16,12 @@ import {
   BOOKING_STATUS,
   SEAT_STATUS,
   SHOW_STATUS,
+  MOVIE_STATUS,
+  FORMATS,
   AUDIT_ENTITIES,
   CELL_KIND,
+  ROLES,
+  USER_STATUS,
 } from '../constants/enums.js';
 import { MESSAGES, MACHINE_CODES } from '../constants/messages.js';
 import { cancelShowAndRefundAll } from '../services/refund.service.js';
@@ -27,7 +31,7 @@ import {
   generateRevenueReportCSV,
   generateOccupancyReportCSV,
 } from '../services/report.service.js';
-import { getISTDayRange, formatISTDateOnly } from '../utils/ist-date.js';
+import { getISTDayRange, formatISTDateOnly, createISTInstant } from '../utils/ist-date.js';
 
 // Helper to log admin actions inside audit trail
 async function logAudit(actor, action, entity, entityId, beforeSnapshot, afterSnapshot, ip) {
@@ -192,8 +196,78 @@ export async function getAdminMovies(req, res, next) {
 
 export async function createMovie(req, res, next) {
   try {
-    const movie = await Movie.create(req.body);
+    const movieData = { ...req.body };
+    if (!movieData.synopsis || movieData.synopsis.trim() === '') {
+      movieData.synopsis = movieData.title || 'Movie synopsis';
+    }
+    const movie = await Movie.create(movieData);
     await logAudit(req.user, 'CREATE', AUDIT_ENTITIES.MOVIE, movie._id, null, movie.toObject(), req.ip);
+
+    // Auto-schedule daily shows for NOW_SHOWING movies so they are immediately bookable
+    if (movie.status === MOVIE_STATUS.NOW_SHOWING) {
+      try {
+        const screens = await Screen.find();
+        const showTimes = ['11:30', '15:15', '19:00', '22:45'];
+        for (let dayOffset = 0; dayOffset < 7; dayOffset++) {
+          const targetDate = new Date();
+          targetDate.setDate(targetDate.getDate() + dayOffset);
+          const dateStr = formatISTDateOnly(targetDate);
+
+          for (const screen of screens) {
+            for (const timeStr of showTimes) {
+              const startInstant = createISTInstant(dateStr, timeStr);
+              const endInstant = new Date(startInstant.getTime() + (movie.durationMinutes + 20) * 60 * 1000);
+              const pricing = { RECLINER: 40000, PREMIUM: 30000, REGULAR: 20000 };
+
+              const show = await Show.findOneAndUpdate(
+                { screenId: screen._id, startTime: startInstant },
+                {
+                  $set: {
+                    movieId: movie._id,
+                    screenId: screen._id,
+                    theatreId: screen.theatreId,
+                    startTime: startInstant,
+                    endTime: endInstant,
+                    language: movie.languages?.[0] || 'Hindi',
+                    format: screen.name.includes('IMAX') ? FORMATS.IMAX : FORMATS.TWO_D,
+                    pricing,
+                    status: SHOW_STATUS.SCHEDULED,
+                  },
+                },
+                { upsert: true, new: true }
+              );
+
+              const seatDocs = [];
+              for (const cell of screen.layout.cells) {
+                if (cell.kind === CELL_KIND.SEAT && cell.label) {
+                  seatDocs.push({
+                    showId: show._id,
+                    seatLabel: cell.label,
+                    category: cell.category,
+                    price: pricing[cell.category] || pricing.REGULAR,
+                    status: SEAT_STATUS.AVAILABLE,
+                  });
+                }
+              }
+
+              if (seatDocs.length > 0) {
+                const ops = seatDocs.map((s) => ({
+                  updateOne: {
+                    filter: { showId: s.showId, seatLabel: s.seatLabel },
+                    update: { $setOnInsert: s },
+                    upsert: true,
+                  },
+                }));
+                await ShowSeat.bulkWrite(ops, { ordered: false });
+              }
+            }
+          }
+        }
+      } catch (err) {
+        console.warn('[AUTO-SHOW SCHEDULE WARN]', err.message);
+      }
+    }
+
     return res.status(201).json({ movie });
   } catch (error) {
     next(error);
@@ -207,7 +281,12 @@ export async function updateMovie(req, res, next) {
       return res.status(404).json({ error: MESSAGES.RESOURCE_NOT_FOUND });
     }
 
-    const after = await Movie.findByIdAndUpdate(req.params.id, { $set: req.body }, { new: true, runValidators: true });
+    const updateData = { ...req.body };
+    if (updateData.synopsis !== undefined && (!updateData.synopsis || updateData.synopsis.trim() === '')) {
+      updateData.synopsis = updateData.title || before.title || 'Movie synopsis';
+    }
+
+    const after = await Movie.findByIdAndUpdate(req.params.id, { $set: updateData }, { new: true, runValidators: true });
     await logAudit(req.user, 'UPDATE', AUDIT_ENTITIES.MOVIE, after._id, before.toObject(), after.toObject(), req.ip);
     return res.status(200).json({ movie: after });
   } catch (error) {
@@ -250,7 +329,23 @@ export async function getAdminTheatres(req, res, next) {
 
 export async function createTheatre(req, res, next) {
   try {
-    const theatre = await Theatre.create(req.body);
+    const data = { ...req.body };
+    if (data.contact && typeof data.contact === 'object') {
+      const phone = data.contact.phone?.trim();
+      const email = data.contact.email?.trim();
+      if (!phone && !email) {
+        data.contact = undefined;
+      } else {
+        data.contact = {
+          ...(phone && { phone }),
+          ...(email && { email }),
+        };
+      }
+    } else if (typeof data.contact === 'string') {
+      data.contact = data.contact.trim() || undefined;
+    }
+
+    const theatre = await Theatre.create(data);
     await logAudit(req.user, 'CREATE', AUDIT_ENTITIES.THEATRE, theatre._id, null, theatre.toObject(), req.ip);
     return res.status(201).json({ theatre });
   } catch (error) {
@@ -263,7 +358,23 @@ export async function updateTheatre(req, res, next) {
     const before = await Theatre.findById(req.params.id);
     if (!before) return res.status(404).json({ error: MESSAGES.RESOURCE_NOT_FOUND });
 
-    const after = await Theatre.findByIdAndUpdate(req.params.id, { $set: req.body }, { new: true, runValidators: true });
+    const data = { ...req.body };
+    if (data.contact && typeof data.contact === 'object') {
+      const phone = data.contact.phone?.trim();
+      const email = data.contact.email?.trim();
+      if (!phone && !email) {
+        data.contact = undefined;
+      } else {
+        data.contact = {
+          ...(phone && { phone }),
+          ...(email && { email }),
+        };
+      }
+    } else if (typeof data.contact === 'string') {
+      data.contact = data.contact.trim() || undefined;
+    }
+
+    const after = await Theatre.findByIdAndUpdate(req.params.id, { $set: data }, { new: true, runValidators: true });
     await logAudit(req.user, 'UPDATE', AUDIT_ENTITIES.THEATRE, after._id, before.toObject(), after.toObject(), req.ip);
     return res.status(200).json({ theatre: after });
   } catch (error) {
@@ -421,6 +532,17 @@ export async function createShow(req, res, next) {
       });
     }
 
+    const reclinerPrice = pricing?.RECLINER || pricing?.VIP || 40000;
+    const premiumPrice = pricing?.PREMIUM || 30000;
+    const regularPrice = pricing?.REGULAR || 20000;
+
+    const normalizedPricing = {
+      REGULAR: Number(regularPrice),
+      PREMIUM: Number(premiumPrice),
+      RECLINER: Number(reclinerPrice),
+      VIP: Number(reclinerPrice),
+    };
+
     const show = await Show.create({
       movieId: movie._id,
       screenId: screen._id,
@@ -428,8 +550,8 @@ export async function createShow(req, res, next) {
       startTime: start,
       endTime: end,
       language: language || movie.languages[0],
-      format: format || screen.name.includes('IMAX') ? 'IMAX' : '2D',
-      pricing,
+      format: format || (screen.name.includes('IMAX') ? 'IMAX' : '2D'),
+      pricing: normalizedPricing,
       status: SHOW_STATUS.SCHEDULED,
     });
 
@@ -437,7 +559,7 @@ export async function createShow(req, res, next) {
     const seatDocs = [];
     for (const cell of screen.layout.cells) {
       if (cell.kind === CELL_KIND.SEAT && cell.label) {
-        const price = pricing[cell.category] || pricing.REGULAR;
+        const price = normalizedPricing[cell.category] || normalizedPricing.REGULAR;
         seatDocs.push({
           showId: show._id,
           seatLabel: cell.label,
@@ -742,6 +864,65 @@ export async function updateUserStatus(req, res, next) {
     await logAudit(req.user, 'UPDATE_USER_STATUS', AUDIT_ENTITIES.USER, user._id, before, user.toObject(), req.ip);
     return res.status(200).json({ user: user.toJSON() });
   } catch (error) {
+    next(error);
+  }
+}
+
+export async function createOrPromoteAdmin(req, res, next) {
+  try {
+    const { name, email, phone, password } = req.body;
+
+    if (!email || !email.trim()) {
+      return res.status(400).json({ error: 'Email address is required.' });
+    }
+
+    const normalizedEmail = email.trim().toLowerCase();
+    let user = await User.findOne({ email: normalizedEmail });
+    const before = user ? user.toObject() : null;
+
+    if (user) {
+      user.role = ROLES.ADMIN;
+      user.status = USER_STATUS.ACTIVE;
+      if (name && name.trim()) user.name = name.trim();
+      if (phone && phone.trim()) user.phone = phone.trim();
+      if (password && password.trim()) {
+        user.passwordHash = await User.hashPassword(password.trim());
+      }
+      await user.save();
+    } else {
+      if (!name || !name.trim()) {
+        return res.status(400).json({ error: 'Full name is required to create a new admin.' });
+      }
+      const initialPassword = password && password.trim() ? password.trim() : 'Admin@123';
+      const passwordHash = await User.hashPassword(initialPassword);
+
+      user = await User.create({
+        name: name.trim(),
+        email: normalizedEmail,
+        phone: phone && phone.trim() ? phone.trim() : undefined,
+        passwordHash,
+        role: ROLES.ADMIN,
+        status: USER_STATUS.ACTIVE,
+        authProvider: 'LOCAL',
+      });
+    }
+
+    await logAudit(
+      req.user,
+      before ? 'PROMOTE_ADMIN' : 'CREATE_ADMIN',
+      AUDIT_ENTITIES.USER,
+      user._id,
+      before,
+      user.toObject(),
+      req.ip
+    );
+
+    return res.status(201).json({
+      message: `Admin access granted to ${user.email} successfully.`,
+      user: user.toJSON(),
+    });
+  } catch (error) {
+    console.error('[CREATE ADMIN ERROR]:', error);
     next(error);
   }
 }

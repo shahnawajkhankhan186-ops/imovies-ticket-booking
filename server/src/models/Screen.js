@@ -33,6 +33,11 @@ const screenSchema = new mongoose.Schema(
       required: [true, 'Screen name is required'],
       trim: true,
     },
+    soundSystem: {
+      type: String,
+      trim: true,
+      default: 'Dolby Atmos 7.1',
+    },
     totalSeats: {
       type: Number,
       required: true,

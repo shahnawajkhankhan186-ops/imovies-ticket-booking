@@ -2,8 +2,9 @@ import React from 'react';
 import { Clock } from 'lucide-react';
 import { useCountdown } from '../../hooks/useCountdown';
 
-export default function CountdownTimer({ targetDate, onExpire, className = '' }) {
-  const { formattedTime, minutes, isExpired } = useCountdown(targetDate, onExpire);
+export default function CountdownTimer({ targetDate, expiresAt, onExpire, className = '' }) {
+  const date = targetDate || expiresAt;
+  const { formattedTime, minutes, isExpired } = useCountdown(date, onExpire);
 
   const isCritical = minutes < 2 && !isExpired;
 

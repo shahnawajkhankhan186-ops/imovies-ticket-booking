@@ -10,6 +10,8 @@
     "lint": "eslint src/ --ext .js,.jsx"
   },
   "dependencies": {
+    "@react-oauth/google": "^0.13.5",
+    "@supabase/supabase-js": "^2.118.0",
     "axios": "^1.7.9",
     "bootstrap": "^5.3.3",
     "html2canvas": "^1.4.1",

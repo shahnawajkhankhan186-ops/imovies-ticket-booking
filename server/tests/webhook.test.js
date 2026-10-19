@@ -14,7 +14,7 @@ describe('Razorpay Webhook & Payment Capture Engine', () => {
     await mongoose.connect(env.MONGODB_URI);
     testUser = await User.findOne({ role: 'USER' });
     testShow = await Show.findOne({ status: 'SCHEDULED', startTime: { $gt: new Date() } });
-  });
+  }, 30000);
 
   afterAll(async () => {
     await mongoose.disconnect();

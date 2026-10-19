@@ -22,8 +22,23 @@ export function AuthProvider({ children }) {
     checkAuth();
   }, []);
 
-  const login = async (email, password) => {
+  const login = async (emailOrCredentials, maybePassword) => {
+    let email;
+    let password;
+    if (typeof emailOrCredentials === 'object' && emailOrCredentials !== null) {
+      email = emailOrCredentials.email;
+      password = emailOrCredentials.password;
+    } else {
+      email = emailOrCredentials;
+      password = maybePassword;
+    }
     const res = await api.post('/auth/login', { email, password });
+    setUser(res.data.user);
+    return res.data.user;
+  };
+
+  const loginWithGoogle = async (credential) => {
+    const res = await api.post('/auth/google', { credential });
     setUser(res.data.user);
     return res.data.user;
   };
@@ -51,6 +66,7 @@ export function AuthProvider({ children }) {
     loading,
     isAdmin: user?.role === 'ADMIN',
     login,
+    loginWithGoogle,
     register,
     logout,
     refreshUser,

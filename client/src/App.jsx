@@ -6,6 +6,7 @@ import { CityProvider } from './context/CityContext';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import AppRoutes from './routes/AppRoutes';
+import ErrorBoundary from './components/ui/ErrorBoundary';
 
 export default function App() {
   return (
@@ -40,7 +41,9 @@ export default function App() {
             />
             <Navbar />
             <main className="flex-grow-1">
-              <AppRoutes />
+              <ErrorBoundary>
+                <AppRoutes />
+              </ErrorBoundary>
             </main>
             <Footer />
           </div>

@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { Search, Play, Sparkles, Filter } from 'lucide-react';
+import { Search, Play } from 'lucide-react';
 import api from '../../lib/api';
 import { useCity } from '../../context/CityContext';
 import MovieCard from '../../components/movies/MovieCard';
@@ -18,7 +18,7 @@ export default function HomePage() {
   const [selectedLanguage, setSelectedLanguage] = useState('');
   const [trailerMovie, setTrailerMovie] = useState(null);
 
-  const fetchMovies = async () => {
+  const fetchMovies = useCallback(async () => {
     setLoading(true);
     try {
       const params = {
@@ -36,11 +36,11 @@ export default function HomePage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [activeTab, city, searchQuery, selectedGenre, selectedLanguage]);
 
   useEffect(() => {
     fetchMovies();
-  }, [city, activeTab, selectedGenre, selectedLanguage]);
+  }, [fetchMovies]);
 
   const handleSearchSubmit = (e) => {
     e.preventDefault();

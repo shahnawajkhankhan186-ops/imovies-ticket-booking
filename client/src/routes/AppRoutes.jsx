@@ -44,10 +44,14 @@ export default function AppRoutes() {
     <Routes>
       {/* Public Routes */}
       <Route path="/" element={<HomePage />} />
+      <Route path="/movies/:id" element={<MovieDetailPage />} />
       <Route path="/movie/:id" element={<MovieDetailPage />} />
+      <Route path="/movies/:id/shows" element={<ShowSelectionPage />} />
       <Route path="/movie/:id/shows" element={<ShowSelectionPage />} />
       <Route path="/shows/:showId/seats" element={<SeatSelectionPage />} />
+      <Route path="/shows/:id/seats" element={<SeatSelectionPage />} />
       <Route path="/book/:showId" element={<SeatSelectionPage />} />
+      <Route path="/book/:id" element={<SeatSelectionPage />} />
 
       {/* Auth Routes */}
       <Route path="/login" element={<LoginPage />} />

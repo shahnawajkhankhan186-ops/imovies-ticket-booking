@@ -10,6 +10,8 @@ const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:5001';
  */
 export function useSocket(showId, eventHandlers = {}) {
   const socketRef = useRef(null);
+  const handlersRef = useRef(eventHandlers);
+  handlersRef.current = eventHandlers;
 
   useEffect(() => {
     if (!showId) return;
@@ -25,21 +27,13 @@ export function useSocket(showId, eventHandlers = {}) {
       socket.emit('join:show', showId);
     });
 
-    if (eventHandlers.onSeatsHeld) {
-      socket.on('seats:held', eventHandlers.onSeatsHeld);
-    }
-    if (eventHandlers.onSeatsReleased) {
-      socket.on('seats:released', eventHandlers.onSeatsReleased);
-    }
-    if (eventHandlers.onSeatsBooked) {
-      socket.on('seats:booked', eventHandlers.onSeatsBooked);
-    }
+    socket.on('seats:held', (data) => handlersRef.current.onSeatsHeld?.(data));
+    socket.on('seats:released', (data) => handlersRef.current.onSeatsReleased?.(data));
+    socket.on('seats:booked', (data) => handlersRef.current.onSeatsBooked?.(data));
 
     // 10s Polling fallback to guarantee state synchronization
     const pollInterval = setInterval(() => {
-      if (eventHandlers.onPollRefresh) {
-        eventHandlers.onPollRefresh();
-      }
+      handlersRef.current.onPollRefresh?.();
     }, 10000);
 
     return () => {

@@ -15,6 +15,10 @@ export default function MovieCard({ movie }) {
           className="w-100 h-100 object-fit-cover transition"
           style={{ transition: 'transform 0.3s ease' }}
           loading="lazy"
+          onError={(e) => {
+            e.currentTarget.onerror = null;
+            e.currentTarget.src = 'https://images.unsplash.com/photo-1635805737707-575885ab0820?w=600&auto=format&fit=crop&q=80';
+          }}
         />
 
         {/* Certificate Badge */}

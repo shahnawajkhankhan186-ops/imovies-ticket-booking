@@ -3,6 +3,7 @@ import {
   register,
   login,
   logout,
+  googleLogin,
   getMe,
   forgotPassword,
   resetPassword,
@@ -19,6 +20,7 @@ const router = Router();
 
 router.post('/register', authLimiter, validate(registerSchema), register);
 router.post('/login', authLimiter, validate(loginSchema), login);
+router.post('/google', googleLogin);
 router.post('/logout', logout);
 router.get('/me', requireAuth, getMe);
 router.post('/forgot-password', authLimiter, validate(forgotPasswordSchema), forgotPassword);

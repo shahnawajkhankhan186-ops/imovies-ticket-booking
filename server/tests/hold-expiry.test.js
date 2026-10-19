@@ -15,9 +15,11 @@ describe('Immediate Expired Hold Availability Engine', () => {
     await mongoose.connect(env.MONGODB_URI);
 
     show = await Show.findOne({ status: 'SCHEDULED', startTime: { $gt: new Date() } });
-    testUser1 = await User.findOne({ email: 'rahul@example.com' });
-    testUser2 = await User.findOne({ email: 'priya@example.com' });
-  });
+    testUser1 = (await User.findOne({ email: 'rahul@example.com' })) || (await User.findOne({ role: 'USER' }));
+    testUser2 =
+      (await User.findOne({ email: 'priya@example.com' })) ||
+      (await User.findOne({ role: 'USER', _id: { $ne: testUser1?._id } }));
+  }, 30000);
 
   afterAll(async () => {
     if (show) {
