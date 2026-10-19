@@ -4,7 +4,7 @@ import { useAuth } from '../../hooks/useAuth';
 import Input from '../../components/ui/Input';
 import Button from '../../components/ui/Button';
 import AlertBanner from '../../components/ui/AlertBanner';
-import { Film, Lock, Mail, UserCheck } from 'lucide-react';
+import { Film } from 'lucide-react';
 import toast from 'react-hot-toast';
 import GoogleSignInButton from '../../components/auth/GoogleSignInButton';
 
@@ -44,11 +44,6 @@ export default function LoginPage() {
     }
   };
 
-  const fillCredentials = (demoEmail, demoPassword) => {
-    setEmail(demoEmail);
-    setPassword(demoPassword);
-    setError(null);
-  };
 
   return (
     <div className="container py-5 d-flex justify-content-center align-items-center min-vh-75">
@@ -107,21 +102,6 @@ export default function LoginPage() {
         </div>
 
         <GoogleSignInButton label="Continue with Google" />
-
-        {/* Demo Fast Login Button (User Only) */}
-        <div className="mt-4 pt-3 border-top" style={{ borderColor: 'var(--border-color)' }}>
-          <div className="text-secondary small text-center mb-2">⚡ Quick-Fill Demo Account:</div>
-          <div className="d-flex justify-content-center">
-            <button
-              type="button"
-              onClick={() => fillCredentials('rahul@example.com', 'User@123')}
-              className="btn btn-sm btn-outline-secondary w-100 d-flex align-items-center justify-content-center gap-1"
-            >
-              <UserCheck size={14} />
-              <span>User Demo (rahul@example.com)</span>
-            </button>
-          </div>
-        </div>
 
         <div className="text-center mt-4 text-secondary small">
           Don&apos;t have an account?{' '}
