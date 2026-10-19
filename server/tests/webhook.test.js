@@ -11,14 +11,14 @@ describe('Razorpay Webhook & Payment Capture Engine', () => {
   let testShow;
 
   beforeAll(async () => {
-    await mongoose.connect(env.MONGODB_URI);
+    if (mongoose.connection.readyState === 0) {
+      await mongoose.connect(env.MONGODB_URI);
+    }
     testUser = await User.findOne({ role: 'USER' });
     testShow = await Show.findOne({ status: 'SCHEDULED', startTime: { $gt: new Date() } });
   }, 30000);
 
-  afterAll(async () => {
-    await mongoose.disconnect();
-  });
+  afterAll(async () => {});
 
   function generateSignature(payloadString) {
     return crypto

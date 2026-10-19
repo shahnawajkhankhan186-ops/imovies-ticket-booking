@@ -9,7 +9,9 @@ describe('Pricing & Coupon Precision Engine (Integer Paise)', () => {
   let testFlatCoupon;
 
   beforeAll(async () => {
-    await mongoose.connect(env.MONGODB_URI);
+    if (mongoose.connection.readyState === 0) {
+      await mongoose.connect(env.MONGODB_URI);
+    }
     await Setting.getSettings();
 
     // Setup test percentage coupon: 50% discount up to ₹150 (15000 paise), min ₹200 (20000 paise)
@@ -127,5 +129,11 @@ describe('Pricing & Coupon Precision Engine (Integer Paise)', () => {
   test('Rejects invalid non-existent coupon', async () => {
     const seats = [{ seatLabel: 'A1', category: 'REGULAR', price: 25000 }];
     await expect(calculateBookingPricing(seats, 'NONEXISTENT_CODE')).rejects.toThrow();
+  });
+
+  afterAll(async () => {
+    if (mongoose.connection.readyState === 1) {
+      await Coupon.deleteMany({ code: { $in: ['TEST50', 'TESTFLAT100'] } });
+    }
   });
 });

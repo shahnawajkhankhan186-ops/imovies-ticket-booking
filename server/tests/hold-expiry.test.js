@@ -12,7 +12,9 @@ describe('Immediate Expired Hold Availability Engine', () => {
   const testSeatLabel = 'EXP-A1';
 
   beforeAll(async () => {
-    await mongoose.connect(env.MONGODB_URI);
+    if (mongoose.connection.readyState === 0) {
+      await mongoose.connect(env.MONGODB_URI);
+    }
 
     show = await Show.findOne({ status: 'SCHEDULED', startTime: { $gt: new Date() } });
     testUser1 = (await User.findOne({ email: 'rahul@example.com' })) || (await User.findOne({ role: 'USER' }));
@@ -26,7 +28,6 @@ describe('Immediate Expired Hold Availability Engine', () => {
       await ShowSeat.deleteMany({ showId: show._id, seatLabel: testSeatLabel });
       await Booking.deleteMany({ showId: show._id, 'seats.seatLabel': testSeatLabel });
     }
-    await mongoose.disconnect();
   });
 
   test('resolveSeatStatus and isSeatFree evaluate expired HELD seat as AVAILABLE immediately', () => {

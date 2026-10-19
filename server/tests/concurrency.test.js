@@ -10,7 +10,9 @@ describe('Seat Concurrency Engine (100 Parallel Requests)', () => {
   const testSeatLabel = 'CONC-A1';
 
   beforeAll(async () => {
-    await mongoose.connect(env.MONGODB_URI);
+    if (mongoose.connection.readyState === 0) {
+      await mongoose.connect(env.MONGODB_URI);
+    }
 
     show = await Show.findOne({ status: 'SCHEDULED', startTime: { $gt: new Date() } });
     if (!show) {
