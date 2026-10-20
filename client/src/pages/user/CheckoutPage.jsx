@@ -246,9 +246,13 @@ export default function CheckoutPage() {
       {/* Top Banner / Timer */}
       <div className="im-glass p-3 rounded-4 mb-4 d-flex flex-wrap align-items-center justify-content-between gap-3">
         <div className="d-flex align-items-center gap-3">
-          <Link to={-1} className="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1">
+          <button
+            type="button"
+            onClick={() => setReleaseOpen(true)}
+            className="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1"
+          >
             <ArrowLeft size={16} /> Back
-          </Link>
+          </button>
           <div>
             <h5 className="m-0 fw-bold">Order Checkout</h5>
             <span className="text-secondary small">Booking Ref: {booking.bookingCode}</span>

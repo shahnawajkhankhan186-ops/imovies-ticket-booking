@@ -5,7 +5,8 @@ import { formatISTDateTime } from '../../lib/ist-date';
 import StatusBadge from '../../components/ui/StatusBadge';
 import LoadingSpinner from '../../components/ui/LoadingSpinner';
 import Modal from '../../components/ui/Modal';
-import { Search, Ticket, User, Film, CreditCard, Eye } from 'lucide-react';
+import ConfirmDialog from '../../components/ui/ConfirmDialog';
+import { Search, Ticket, User, Film, CreditCard, Eye, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export default function AdminBookingsPage() {
@@ -18,6 +19,10 @@ export default function AdminBookingsPage() {
 
   // Inspector Modal
   const [inspectBooking, setInspectBooking] = useState(null);
+
+  // Delete dialog state
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [deleting, setDeleting] = useState(false);
 
   const fetchBookings = useCallback(async () => {
     try {
@@ -38,6 +43,21 @@ export default function AdminBookingsPage() {
   useEffect(() => {
     fetchBookings();
   }, [fetchBookings]);
+
+  const handleDeleteBooking = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
+      await api.delete(`/admin/bookings/${deleteTarget._id}`);
+      toast.success(`Booking #${deleteTarget.bookingCode} removed successfully`);
+      setDeleteTarget(null);
+      fetchBookings();
+    } catch (err) {
+      toast.error(err.message || 'Failed to delete booking');
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   return (
     <div>
@@ -75,8 +95,8 @@ export default function AdminBookingsPage() {
             <option value="CONFIRMED">Confirmed</option>
             <option value="USED">Used / Admitted</option>
             <option value="AWAITING_PAYMENT">Awaiting Payment</option>
-            <option value="CANCELLED">Cancelled</option>
             <option value="EXPIRED">Expired</option>
+            <option value="CANCELLED">Cancelled</option>
           </select>
         </div>
       </div>
@@ -103,7 +123,7 @@ export default function AdminBookingsPage() {
                     <th>Seats</th>
                     <th>Amount</th>
                     <th>Status</th>
-                    <th className="text-end">Inspect</th>
+                    <th className="text-end">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -144,13 +164,23 @@ export default function AdminBookingsPage() {
                         <StatusBadge status={b.status} />
                       </td>
                       <td className="text-end">
-                        <button
-                          className="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1"
-                          onClick={() => setInspectBooking(b)}
-                        >
-                          <Eye size={14} />
-                          <span>View</span>
-                        </button>
+                        <div className="d-inline-flex gap-2">
+                          <button
+                            className="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1"
+                            onClick={() => setInspectBooking(b)}
+                            title="Inspect Booking Details"
+                          >
+                            <Eye size={14} />
+                            <span>View</span>
+                          </button>
+                          <button
+                            className="btn btn-sm btn-outline-danger d-inline-flex align-items-center"
+                            onClick={() => setDeleteTarget(b)}
+                            title="Delete Booking Record"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -263,6 +293,22 @@ export default function AdminBookingsPage() {
           </div>
         </Modal>
       )}
+
+      {/* Delete Booking Confirm Dialog */}
+      <ConfirmDialog
+        isOpen={Boolean(deleteTarget)}
+        title="Delete Booking Record"
+        message={
+          deleteTarget
+            ? `Are you sure you want to permanently delete booking #${deleteTarget.bookingCode} for "${deleteTarget.userId?.name || 'Customer'}" (${deleteTarget.seats?.map((s) => s.seatLabel).join(', ')})? Any held seats associated with it will immediately be freed.`
+            : ''
+        }
+        confirmText="Yes, Delete Booking"
+        variant="danger"
+        loading={deleting}
+        onConfirm={handleDeleteBooking}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </div>
   );
 }

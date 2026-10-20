@@ -1,6 +1,7 @@
 import app from '../src/app.js';
 import mongoose from 'mongoose';
 import { env } from '../src/config/env.js';
+import { cleanupExpiredHolds } from '../src/jobs/expireHolds.js';
 
 let isConnected = false;
 
@@ -17,6 +18,8 @@ async function ensureDatabase() {
 export default async function handler(req, res) {
   try {
     await ensureDatabase();
+    // In serverless environments, lazily cleanup expired holds
+    await cleanupExpiredHolds();
   } catch (err) {
     console.error('[VERCEL SERVERLESS ERROR] MongoDB connection failure:', err.message);
     return res.status(500).json({ error: 'Database connection failed', details: err.message });

@@ -15,6 +15,7 @@ import { BOOKING_STATUS, PAYMENT_STATUS, SEAT_STATUS } from '../constants/enums.
 import { MESSAGES } from '../constants/messages.js';
 import { razorpay } from '../config/razorpay.js';
 import { emitToShowRoom } from '../sockets/seatSocket.js';
+import { cleanupExpiredHolds } from '../jobs/expireHolds.js';
 
 export const holdSeatsSchema = z.object({
   showId: z.string().min(1, 'Show ID is required'),
@@ -208,6 +209,7 @@ export async function testPayBooking(req, res, next) {
 
 export async function getUserBookings(req, res, next) {
   try {
+    await cleanupExpiredHolds();
     const { status, page = 1, limit = 10 } = req.query;
     const query = { userId: req.user._id };
 
