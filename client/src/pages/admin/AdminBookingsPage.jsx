@@ -24,6 +24,7 @@ export default function AdminBookingsPage() {
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleting, setDeleting] = useState(false);
 
+
   const fetchBookings = useCallback(async () => {
     try {
       setLoading(true);

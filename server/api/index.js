@@ -18,8 +18,11 @@ async function ensureDatabase() {
 export default async function handler(req, res) {
   try {
     await ensureDatabase();
-    // In serverless environments, lazily cleanup expired holds
-    await cleanupExpiredHolds();
+    try {
+      await cleanupExpiredHolds();
+    } catch (cleanupErr) {
+      console.warn('[SERVERLESS CLEANUP WARN]', cleanupErr.message);
+    }
   } catch (err) {
     console.error('[VERCEL SERVERLESS ERROR] MongoDB connection failure:', err.message);
     return res.status(500).json({ error: 'Database connection failed', details: err.message });

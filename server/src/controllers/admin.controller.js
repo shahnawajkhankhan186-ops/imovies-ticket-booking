@@ -408,33 +408,76 @@ export async function deleteScreen(req, res, next) {
 // 5. Shows & Screen Clash Prevention
 export async function getAdminShows(req, res, next) {
   try {
-    const { date, theatreId, movieId, page = 1, limit = 30 } = req.query;
+    const { date, theatreId, movieId, screenId, status, q, sort = 'asc', page = 1, limit = 50 } = req.query;
     const filter = {};
 
     if (theatreId) filter.theatreId = theatreId;
     if (movieId) filter.movieId = movieId;
+    if (screenId) filter.screenId = screenId;
+    if (status) filter.status = status;
+
     if (date) {
-      const { startUTC, endUTC } = getISTDayRange(date);
-      filter.startTime = { $gte: startUTC, $lte: endUTC };
+      if (date === 'today') {
+        const todayStr = formatISTDateOnly(new Date());
+        const { startUTC, endUTC } = getISTDayRange(todayStr);
+        filter.startTime = { $gte: startUTC, $lte: endUTC };
+      } else if (date === 'tomorrow') {
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        const tomorrowStr = formatISTDateOnly(tomorrow);
+        const { startUTC, endUTC } = getISTDayRange(tomorrowStr);
+        filter.startTime = { $gte: startUTC, $lte: endUTC };
+      } else if (date === 'upcoming') {
+        filter.startTime = { $gte: new Date() };
+      } else if (date === 'past') {
+        filter.startTime = { $lt: new Date() };
+      } else if (date !== 'all') {
+        const { startUTC, endUTC } = getISTDayRange(date);
+        filter.startTime = { $gte: startUTC, $lte: endUTC };
+      }
+    }
+
+    if (q && q.trim() !== '') {
+      const matchingMovies = await Movie.find({
+        title: new RegExp(q.trim(), 'i'),
+      }).select('_id');
+      const movieIds = matchingMovies.map((m) => m._id);
+      filter.movieId = { $in: movieIds };
+    }
+
+    const sortOrder = sort === 'desc' ? -1 : 1;
+
+    let limitNum = 50;
+    if (limit === 'all') {
+      limitNum = 500;
+    } else {
+      limitNum = Math.min(200, Math.max(1, parseInt(limit, 10) || 50));
     }
 
     const pageNum = Math.max(1, parseInt(page, 10));
-    const limitNum = Math.min(100, Math.max(1, parseInt(limit, 10)));
-    const skip = (pageNum - 1) * limitNum;
+    const skip = limit === 'all' ? 0 : (pageNum - 1) * limitNum;
 
     const [shows, total] = await Promise.all([
       Show.find(filter)
-        .populate('movieId', 'title posterUrl durationMinutes certificate')
+        .populate('movieId', 'title posterUrl durationMinutes certificate languages formats')
         .populate('theatreId', 'name city')
-        .populate('screenId', 'name totalSeats')
-        .sort({ startTime: -1 })
+        .populate('screenId', 'name totalSeats soundSystem')
+        .sort({ startTime: sortOrder })
         .skip(skip)
         .limit(limitNum)
         .lean(),
       Show.countDocuments(filter),
     ]);
 
-    return res.status(200).json({ shows, total, page: pageNum });
+    const totalPages = Math.ceil(total / limitNum) || 1;
+
+    return res.status(200).json({
+      shows,
+      total,
+      page: pageNum,
+      totalPages,
+      limit: limitNum,
+    });
   } catch (error) {
     next(error);
   }
