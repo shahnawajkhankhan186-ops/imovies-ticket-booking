@@ -6,9 +6,11 @@
 [![MongoDB](https://img.shields.io/badge/MongoDB-7.0%20ReplicaSet-47A248?logo=mongodb&logoColor=white)](https://www.mongodb.com/)
 [![Socket.io](https://img.shields.io/badge/Socket.io-4.8%20Realtime-010101?logo=socket.io&logoColor=white)](https://socket.io/)
 [![Payment Gateway](https://img.shields.io/badge/Razorpay-Test%20Mode-0C2340?logo=razorpay&logoColor=white)](https://razorpay.com/)
-[![License](https://img.shields.io/badge/License-Proprietary-red)](#)
+[![Deployment](https://img.shields.io/badge/Deployed-Vercel-black?logo=vercel&logoColor=white)](https://imovies-ticket-booking-mq7l.vercel.app/)
 
-> **IMovies** is a full-featured, enterprise-grade movie ticketing and cinema auditorium management system built using the **MERN** stack (MongoDB, Express, React, Node.js). It features an interactive curved seat-map designer, real-time seat lock engine, multi-document ACID transactional booking, Razorpay payment processing, QR-code ticket verification, and an administrative command center.
+> **IMovies** is a full-featured, enterprise-grade cinema ticket booking and auditorium management platform built using the **MERN** stack (MongoDB, Express, React, Node.js). It features an interactive curved seat-map designer, real-time seat lock engine, multi-document ACID transactional booking, Razorpay payment processing, QR-code ticket verification, fully mobile-responsive UI, and an administrative command center.
+
+🌐 **Live Production Deployment:** [https://imovies-ticket-booking-mq7l.vercel.app](https://imovies-ticket-booking-mq7l.vercel.app)
 
 ---
 
@@ -23,8 +25,9 @@
 - [8. Database Seeding & Demo Logins](#-8-database-seeding--demo-logins)
 - [9. Running the Application](#-9-running-the-application)
 - [10. Complete REST API Reference](#-10-complete-rest-api-reference)
-- [11. Testing & Quality Assurance](#-11-testing--quality-assurance)
-- [12. Troubleshooting & FAQ](#-12-troubleshooting--faq)
+- [11. Serverless & Vercel Deployment Architecture](#-11-serverless--vercel-deployment-architecture)
+- [12. Testing & Quality Assurance](#-12-testing--quality-assurance)
+- [13. Troubleshooting & FAQ](#-13-troubleshooting--faq)
 
 ---
 
@@ -33,23 +36,23 @@
 ### High-Level System Workflow
 ```mermaid
 graph TD
-    Client["💻 React 18 SPA (Vite)"]
+    Client["💻 React 18 SPA (Vite + Mobile Responsive)"]
     WS["⚡ WebSocket Room (Socket.io)"]
-    API["🚀 Node.js + Express Server"]
-    DB[("🍃 MongoDB Replica Set rs0")]
+    API["🚀 Node.js + Express API / Serverless Handler"]
+    DB[("🍃 MongoDB Replica Set rs0 / Atlas")]
     Gateway["💳 Razorpay Payment Gateway"]
 
     Client -->|"1. Hold Seats (showId, seatLabels)"| API
     API -->|"2. Multi-Doc ACID Tx (Conditional Lock)"| DB
     API -->|"3. Broadcast seats:held event"| WS
-    WS -->|"4. Real-time updates to all browsers"| Client
+    WS -->|"4. Real-time updates to all connected browsers"| Client
     API -->|"5. Create Razorpay Order"| Gateway
     Gateway -->|"6. HMAC Webhook: payment.captured"| API
     API -->|"7. Atomic Confirm & Mark BOOKED"| DB
     API -->|"8. Broadcast seats:booked event"| WS
 ```
 
-### 7-Minute Seat Hold & Concurrency State Engine
+### 10-Minute Seat Hold & Concurrency State Engine
 ```mermaid
 stateDiagram-v2
     [*] --> AVAILABLE: Show Initialized
@@ -57,12 +60,12 @@ stateDiagram-v2
     AVAILABLE --> HELD: User selects & clicks proceed
     note right of HELD
       Locked inside MongoDB Tx.
-      holdExpiresAt = now + 7 mins.
+      holdExpiresAt = now + 10 mins.
       Single hold per user per show.
     end note
 
     HELD --> AVAILABLE: User releases seats explicitly
-    HELD --> AVAILABLE: 7-min timer expires (cron / query check)
+    HELD --> AVAILABLE: 10-min timer expires (cron / lazy query check)
     HELD --> BOOKED: Payment Captured (Atomic Confirmation)
 
     BOOKED --> CANCELLED: User requests cancellation
@@ -104,14 +107,14 @@ stateDiagram-v2
 5. **Timezone Standard (IST Asia/Kolkata)**:
    - Server runs in UTC; ISO timestamps are persisted in MongoDB.
    - All business logic, show scheduling, cutoff calculations, and user interfaces format dates in Indian Standard Time (`DD MMM YYYY, hh:mm a`) via `utils/ist-date.js`.
-6. **Destructive Action Confirmation**: All destructive UI actions (deleting screens, theatres, shows, or releasing holds) require confirmation via a custom `ConfirmDialog` modal (native `window.confirm()` is prohibited).
+6. **Destructive Action Confirmation**: All destructive UI actions (deleting screens, theatres, shows, bookings, or releasing holds) require confirmation via a custom `ConfirmDialog` modal (native `window.confirm()` is prohibited).
 
 ---
 
 ## ✨ 3. Complete Feature Matrix
 
 ### 👤 Customer Features
-- **Cinematic Homepage**: Dynamic hero banner, filter by City (Mumbai, Bengaluru, Ramgarh, etc.), Now Showing & Upcoming releases.
+- **Cinematic Homepage**: Dynamic hero banner, filter by City (Bhopal, Mumbai, Delhi, Bengaluru, etc.), Now Showing & Upcoming releases.
 - **Rich Movie Detail Page**: Official trailers (embedded), duration, certification badges (`U`, `UA`, `A`), genre tags, synopsis, and cast lists.
 - **Showtime Selection**: Filter screenings by date (next 7 days), theatre multiplex, audio format (`2D`, `3D`, `IMAX`), and language.
 - **Interactive Curved Seat Layout**:
@@ -119,11 +122,12 @@ stateDiagram-v2
   - Multi-tier seat categories: **Recliner (VIP)**, **Premium**, and **Regular**.
   - Dynamic price display per category.
   - Visual distinction between available, held, booked, and blocked seats.
-- **7-Minute Seat Hold Countdown**: Synchronized timer across browsers with automatic release on expiry.
+  - Mobile touch-scroll and pinch support.
+- **10-Minute Seat Hold Countdown**: Synchronized timer across browsers with automatic release on expiry and explicit release dialog.
 - **Coupon Discount Engine**: Apply promo codes (e.g., `FLAT100`, `WELCOME50`, `IMOVIES20`) with instant validation and breakdown calculation.
 - **Payments & Test Mode Checkout**:
   - Full Razorpay checkout modal integration.
-  - Instant One-Click "Test Payment Simulation" for local developer convenience.
+  - Instant One-Click "Test Payment Simulation" for developer testing.
 - **Printable E-Ticket**:
   - High-res digital ticket with embedded **QR Code**.
   - "Print / Save PDF" option formatted for standard receipt/ticket printers.
@@ -134,6 +138,7 @@ stateDiagram-v2
   - Email & Password with secure JWT tokens.
   - One-click **Demo Login** buttons for instant testing.
   - Profile management & password updates.
+- **Fully Mobile Responsive**: All customer pages (home, movie details, showtime picker, seat map, checkout, ticket) adapt seamlessly to smartphones and tablets.
 
 ### 🛡️ Admin Command Center
 - **Executive Dashboard**: Real-time revenue metrics, total bookings, seat occupancy rates, and visual performance charts (Recharts).
@@ -143,16 +148,23 @@ stateDiagram-v2
   - Custom rows & columns grid designer (up to 20x24).
   - Paint tools: Set individual cells or entire rows as Recliner, Premium, Regular, Aisle Gaps, or Blocked.
   - Automatic seat counter and capacity recalculation.
-- **Showtime Scheduler**:
-  - Calendar scheduler with automated **Screen Clash Prevention** (includes mandatory 20-minute cleaning & sanitization buffer).
-  - Custom category pricing overrides per screening.
+- **Showtime Scheduler (Enhanced)**:
+  - Strict manual scheduling giving administrator 100% control.
+  - **Nearest-First Chronological Sorting** (today and upcoming shows first).
+  - Comprehensive filters: Search by movie title, filter by multiplex, filter by movie, filter by date (`All`, `Today`, `Tomorrow`, `Upcoming`, `Past`, `Custom Date`), and rows per page selector.
+  - Automated screen clash prevention with mandatory 20-minute cleaning buffer.
+  - Category pricing overrides per screening.
 - **Live Seat Occupancy Inspector**: View real-time seat occupancy heatmaps for any scheduled screening.
-- **Master Bookings & Payments Ledger**: Complete searchable audit trail of all transactions and customer orders.
+- **Master Bookings & Payments Ledger**:
+  - Complete searchable audit trail of all transactions and customer orders.
+  - **1-Click Booking Record Deletion**: Delete test/unwanted bookings and immediately free all associated seats with `ConfirmDialog` protection.
+  - Status filters: `Confirmed`, `Used / Admitted`, `Awaiting Payment`, `Expired`, `Cancelled`.
 - **QR Gate Scanner & Ticket Verifier**: Search booking codes (`IMV-...`) or scan QR code to verify tickets and admit patrons (marks status as `USED`).
 - **Promotional Coupon Manager**: Create flat or percentage-based coupons with minimum spend requirements and validity dates.
 - **User Administration**: View registered users, suspend fraudulent accounts, or promote members to Admin.
 - **System Audit Logs**: Immutable trail tracking all mutations (CREATE, UPDATE, DELETE) with before/after snapshots and IP addresses.
 - **Reporting & CSV Exports**: One-click streaming CSV exports for Bookings, Revenue, and Occupancy reports.
+- **Mobile-Responsive Admin Navigation**: Offcanvas drawer, responsive data tables, touch-optimized dialogs.
 
 ---
 
@@ -171,13 +183,14 @@ stateDiagram-v2
 ### Backend
 - **Runtime**: [Node.js v20 LTS](https://nodejs.org/)
 - **Server Framework**: [Express 4](https://expressjs.com/)
+- **Serverless Runtime**: Vercel Serverless Functions (`server/api/index.js`)
 - **Database Engine**: [MongoDB 7+](https://www.mongodb.com/) via [Mongoose 8](https://mongoosejs.com/)
-- **Multi-Document ACID**: MongoDB Replica Set (`rs0`)
+- **Multi-Document ACID**: MongoDB Replica Set (`rs0` or MongoDB Atlas)
 - **Real-Time Engine**: [Socket.io 4.8](https://socket.io/)
 - **Security & Middleware**: Helmet, CORS, Express-Rate-Limit, Cookie-Parser, Morgan
 - **Validation**: [Zod](https://zod.dev/)
 - **Payment Processing**: [Razorpay Node SDK](https://github.com/razorpay/razorpay-node) + HMAC-SHA256 Webhook Verification
-- **Background Cron**: [Node-Cron](https://github.com/node-cron/node-cron) for 60-second hold garbage collection
+- **Hold Garbage Collection**: In-process `node-cron` + lazy on-demand evaluation in serverless environments
 
 ---
 
@@ -195,7 +208,7 @@ movies-seat-booking/
 │   │   │   └── ui/                 # Button, Input, Modal, ErrorBoundary, ConfirmDialog
 │   │   ├── context/                # AuthContext, CityContext
 │   │   ├── hooks/                  # useAuth, useSocket, useCountdown
-│   │   ├── lib/                    # api (Axios client), currency formatter
+│   │   ├── lib/                    # api (Axios client), currency, ist-date
 │   │   ├── pages/
 │   │   │   ├── admin/              # Dashboard, Movies, Theatres, Screens, Shows, Bookings, etc.
 │   │   │   ├── auth/               # LoginPage, RegisterPage, ForgotPasswordPage
@@ -210,11 +223,13 @@ movies-seat-booking/
 │   └── vite.config.js
 │
 ├── server/                         # Backend Express + Node.js API
+│   ├── api/                        # Vercel serverless entrypoint (index.js)
 │   ├── scripts/                    # seed.js, e2e-test.js
 │   ├── src/
-│   │   ├── config/                 # Database connection & env variables
+│   │   ├── config/                 # Database connection, env & razorpay
 │   │   ├── constants/              # Enums, machine codes, error messages
-│   │   ├── controllers/            # admin, user, public, auth controllers
+│   │   ├── controllers/            # admin, user, public, auth, webhook controllers
+│   │   ├── jobs/                   # expireHolds.js (lazy & cron hold expiration)
 │   │   ├── middleware/             # requireAuth, requireAdmin, errorHandler
 │   │   ├── models/                 # User, Movie, Theatre, Screen, Show, ShowSeat, Booking, Payment, AuditLog, Coupon
 │   │   ├── routes/                 # admin.routes, user.routes, public.routes, auth.routes
@@ -228,6 +243,7 @@ movies-seat-booking/
 │
 ├── .agents/                        # Repository AI guidelines & rules
 ├── .gitignore
+├── vercel.json                     # Vercel monorepo deployment config
 ├── package.json                    # Monorepo root runner
 └── README.md                       # Complete documentation (this file)
 ```
@@ -253,9 +269,6 @@ MongoDB multi-document transactions require a replica set even on a local machin
 
 - **macOS (Homebrew)**:
   ```bash
-  # Check your /opt/homebrew/etc/mongod.conf has:
-  # replication:
-  #   replSetName: rs0
   brew services restart mongodb-community
   mongosh --eval "rs.initiate()"
   ```
@@ -271,7 +284,7 @@ MongoDB multi-document transactions require a replica set even on a local machin
 
 ## 🔑 7. Environment Variables
 
-### Server Configuration (`server/.env.development`)
+### Server Configuration (`server/.env.development` or Vercel Environment)
 ```ini
 # Server Port & Mode
 PORT=5001
@@ -288,12 +301,12 @@ JWT_EXPIRES_IN=7d
 CLIENT_URL=http://localhost:5173
 
 # Razorpay Test Credentials
-RAZORPAY_KEY_ID=rzp_test_imovies_dummy_key_id
-RAZORPAY_KEY_SECRET=rzp_test_imovies_dummy_secret
-RAZORPAY_WEBHOOK_SECRET=rzp_test_imovies_webhook_secret_123
+RAZORPAY_KEY_ID=rzp_test_YourRazorpayKey
+RAZORPAY_KEY_SECRET=YourRazorpaySecret
+RAZORPAY_WEBHOOK_SECRET=YourWebhookSecret
 
 # Business Rules
-HOLD_MINUTES=7
+HOLD_MINUTES=10
 CONVENIENCE_FEE_PERCENT=5
 MAX_SEATS_PER_BOOKING=8
 ```
@@ -302,7 +315,7 @@ MAX_SEATS_PER_BOOKING=8
 ```ini
 VITE_API_URL=http://localhost:5001/api
 VITE_SOCKET_URL=http://localhost:5001
-VITE_RAZORPAY_KEY_ID=rzp_test_imovies_dummy_key_id
+VITE_RAZORPAY_KEY_ID=rzp_test_YourRazorpayKey
 ```
 
 ---
@@ -364,7 +377,7 @@ npm run dev:client
 ### 🎟️ User Endpoints (`/api/user/*` — Requires JWT Auth)
 | Method | Endpoint | Description |
 | :--- | :--- | :--- |
-| `POST` | `/api/user/bookings/hold` | Atomically hold seats for 7 minutes & calculate pricing |
+| `POST` | `/api/user/bookings/hold` | Atomically hold seats for 10 minutes & calculate pricing |
 | `POST` | `/api/user/bookings/:id/release` | Explicitly release own held seats |
 | `POST` | `/api/user/bookings/:id/pay` | Create/resume Razorpay payment order |
 | `POST` | `/api/user/bookings/:id/test-pay` | Instant developer test-mode payment confirmation |
@@ -386,15 +399,16 @@ npm run dev:client
 | `PUT / DELETE` | `/api/admin/theatres/:id` | Update and remove multiplexes |
 | `GET / POST` | `/api/admin/screens` | List and create auditorium screens with seat grids |
 | `PUT / DELETE` | `/api/admin/screens/:id` | Update screen info and customize visual seat layout |
-| `GET / POST` | `/api/admin/shows` | List and schedule shows with clash check buffer |
+| `GET / POST` | `/api/admin/shows` | List and schedule shows (supports filters, search, nearest sorting) |
 | `DELETE` | `/api/admin/shows/:id` | Cancel show and initiate automatic patron refunds |
 | `GET` | `/api/admin/shows/:id/seats` | Live read-only seat occupancy map for screening |
 | `GET` | `/api/admin/bookings` | Master ledger of all bookings across all cinemas |
+| `DELETE` | `/api/admin/bookings/:id` | Delete booking record & immediately release held seats |
 | `POST` | `/api/admin/bookings/verify` | Gate scanner: Validate QR / code and admit patron (`USED`) |
 | `GET` | `/api/admin/payments` | Financial ledger of captured payments |
 | `GET` | `/api/admin/refunds` | Financial ledger of processed refunds |
 | `GET / PATCH` | `/api/admin/users` | Manage customer accounts & suspend fraudulent users |
-| `POST` | `/api/admin/users/create-admin`| Create a new Admin user or promote existing user |
+| `POST` | `/api/admin/users/admin` | Create a new Admin user or promote existing user |
 | `GET / POST` | `/api/admin/coupons` | Manage discount coupons |
 | `GET` | `/api/admin/reports/:type` | Download itemized CSV reports (`bookings`, `revenue`, `occupancy`) |
 | `GET` | `/api/admin/audit-logs` | Immutable audit trail with before/after state snapshots |
@@ -408,7 +422,16 @@ npm run dev:client
 
 ---
 
-## 🧪 11. Testing & Quality Assurance
+## ☁️ 11. Serverless & Vercel Deployment Architecture
+
+When deployed on **Vercel** (`serverless` mode):
+1. **Database Connection Pooling**: Mongoose reuses cached connections across serverless lambda invocations to avoid exhausting Atlas connection pools.
+2. **Lazy Hold Cleanup Engine**: In a serverless environment where background daemons (`node-cron`) do not persist, `cleanupExpiredHolds()` executes lazily and opportunistically on incoming API requests (`server/api/index.js`, `getAdminBookings`, and `getUserBookings`).
+3. **Single Monorepo Routing**: `vercel.json` maps `/api/*` to the Node.js serverless function (`server/api/index.js`) and routes all other paths to the static Vite frontend (`client/dist`).
+
+---
+
+## 🧪 12. Testing & Quality Assurance
 
 ### Automated Test Suites
 ```bash
@@ -430,19 +453,19 @@ npm run build
 
 ---
 
-## ❓ 12. Troubleshooting & FAQ
+## ❓ 13. Troubleshooting & FAQ
 
 ### Q1: "Transaction numbers are only allowed on a replica set member or mongos"
 - **Solution**: MongoDB multi-document transactions require a replica set. Make sure your local MongoDB has `replication.replSetName: rs0` in `mongod.conf` and run `rs.initiate()` in `mongosh`.
 
-### Q2: Black screen when opening screens or layouts?
-- **Solution**: All icon imports and layout dimensions are now strictly typed. If encountered, ensure your database has been seeded (`npm run seed`) and refresh the browser. The integrated `ErrorBoundary` will catch any unexpected runtime issues.
+### Q2: Shows section is not displaying all shows?
+- **Solution**: Use the new pagination controls (Prev/Next) and filter bar. By default, shows are sorted chronologically with **Nearest Showtime First** (`asc`), prioritizing today's and upcoming shows. You can switch to **Furthest First** or adjust the rows per page (25, 50, 100, All).
 
-### Q3: "Path `pricing.RECLINER` is required" when scheduling a show?
-- **Solution**: The screening scheduler expects `RECLINER`, `PREMIUM`, and `REGULAR` pricing tiers. This has been normalized across client and backend controllers to support both `RECLINER` and legacy `VIP` naming seamlessly.
+### Q3: Abandoned checkout shows "Awaiting Payment" in admin ledger?
+- **Solution**: Any unpaid seat hold expires automatically after 10 minutes. The serverless cleanup engine transitions expired holds to `EXPIRED` and frees seats upon any ledger query or API request. Administrators can also delete records directly with the Trash button.
 
 ### Q4: Port conflict on 5001 or 5173?
-- **Solution**: Check if another process is using the port:
+- **Solution**:
   ```bash
   lsof -i :5001
   lsof -i :5173
