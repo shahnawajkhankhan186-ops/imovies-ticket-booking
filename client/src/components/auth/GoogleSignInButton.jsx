@@ -9,7 +9,7 @@ export default function GoogleSignInButton({ label = 'Continue with Google' }) {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
+  const googleClientId = (import.meta.env.VITE_GOOGLE_CLIENT_ID || '').trim();
   const from =
     typeof location.state?.from === 'string'
       ? location.state.from
