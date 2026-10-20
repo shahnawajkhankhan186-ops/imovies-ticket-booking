@@ -32,6 +32,7 @@ import {
   generateOccupancyReportCSV,
 } from '../services/report.service.js';
 import { getISTDayRange, formatISTDateOnly, createISTInstant } from '../utils/ist-date.js';
+import { cleanupExpiredHolds } from '../jobs/expireHolds.js';
 
 // Helper to log admin actions inside audit trail
 async function logAudit(actor, action, entity, entityId, beforeSnapshot, afterSnapshot, ip) {
@@ -56,6 +57,7 @@ async function logAudit(actor, action, entity, entityId, beforeSnapshot, afterSn
 // 1. Dashboard Stats
 export async function getDashboardStats(req, res, next) {
   try {
+    await cleanupExpiredHolds();
     const todayStr = formatISTDateOnly(new Date());
     const { startUTC: todayStart, endUTC: todayEnd } = getISTDayRange(todayStr);
 
@@ -202,71 +204,6 @@ export async function createMovie(req, res, next) {
     }
     const movie = await Movie.create(movieData);
     await logAudit(req.user, 'CREATE', AUDIT_ENTITIES.MOVIE, movie._id, null, movie.toObject(), req.ip);
-
-    // Auto-schedule daily shows for NOW_SHOWING movies so they are immediately bookable
-    if (movie.status === MOVIE_STATUS.NOW_SHOWING) {
-      try {
-        const screens = await Screen.find();
-        const showTimes = ['11:30', '15:15', '19:00', '22:45'];
-        for (let dayOffset = 0; dayOffset < 7; dayOffset++) {
-          const targetDate = new Date();
-          targetDate.setDate(targetDate.getDate() + dayOffset);
-          const dateStr = formatISTDateOnly(targetDate);
-
-          for (const screen of screens) {
-            for (const timeStr of showTimes) {
-              const startInstant = createISTInstant(dateStr, timeStr);
-              const endInstant = new Date(startInstant.getTime() + (movie.durationMinutes + 20) * 60 * 1000);
-              const pricing = { RECLINER: 40000, PREMIUM: 30000, REGULAR: 20000 };
-
-              const show = await Show.findOneAndUpdate(
-                { screenId: screen._id, startTime: startInstant },
-                {
-                  $set: {
-                    movieId: movie._id,
-                    screenId: screen._id,
-                    theatreId: screen.theatreId,
-                    startTime: startInstant,
-                    endTime: endInstant,
-                    language: movie.languages?.[0] || 'Hindi',
-                    format: screen.name.includes('IMAX') ? FORMATS.IMAX : FORMATS.TWO_D,
-                    pricing,
-                    status: SHOW_STATUS.SCHEDULED,
-                  },
-                },
-                { upsert: true, new: true }
-              );
-
-              const seatDocs = [];
-              for (const cell of screen.layout.cells) {
-                if (cell.kind === CELL_KIND.SEAT && cell.label) {
-                  seatDocs.push({
-                    showId: show._id,
-                    seatLabel: cell.label,
-                    category: cell.category,
-                    price: pricing[cell.category] || pricing.REGULAR,
-                    status: SEAT_STATUS.AVAILABLE,
-                  });
-                }
-              }
-
-              if (seatDocs.length > 0) {
-                const ops = seatDocs.map((s) => ({
-                  updateOne: {
-                    filter: { showId: s.showId, seatLabel: s.seatLabel },
-                    update: { $setOnInsert: s },
-                    upsert: true,
-                  },
-                }));
-                await ShowSeat.bulkWrite(ops, { ordered: false });
-              }
-            }
-          }
-        }
-      } catch (err) {
-        console.warn('[AUTO-SHOW SCHEDULE WARN]', err.message);
-      }
-    }
 
     return res.status(201).json({ movie });
   } catch (error) {
@@ -471,33 +408,76 @@ export async function deleteScreen(req, res, next) {
 // 5. Shows & Screen Clash Prevention
 export async function getAdminShows(req, res, next) {
   try {
-    const { date, theatreId, movieId, page = 1, limit = 30 } = req.query;
+    const { date, theatreId, movieId, screenId, status, q, sort = 'asc', page = 1, limit = 50 } = req.query;
     const filter = {};
 
     if (theatreId) filter.theatreId = theatreId;
     if (movieId) filter.movieId = movieId;
+    if (screenId) filter.screenId = screenId;
+    if (status) filter.status = status;
+
     if (date) {
-      const { startUTC, endUTC } = getISTDayRange(date);
-      filter.startTime = { $gte: startUTC, $lte: endUTC };
+      if (date === 'today') {
+        const todayStr = formatISTDateOnly(new Date());
+        const { startUTC, endUTC } = getISTDayRange(todayStr);
+        filter.startTime = { $gte: startUTC, $lte: endUTC };
+      } else if (date === 'tomorrow') {
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        const tomorrowStr = formatISTDateOnly(tomorrow);
+        const { startUTC, endUTC } = getISTDayRange(tomorrowStr);
+        filter.startTime = { $gte: startUTC, $lte: endUTC };
+      } else if (date === 'upcoming') {
+        filter.startTime = { $gte: new Date() };
+      } else if (date === 'past') {
+        filter.startTime = { $lt: new Date() };
+      } else if (date !== 'all') {
+        const { startUTC, endUTC } = getISTDayRange(date);
+        filter.startTime = { $gte: startUTC, $lte: endUTC };
+      }
+    }
+
+    if (q && q.trim() !== '') {
+      const matchingMovies = await Movie.find({
+        title: new RegExp(q.trim(), 'i'),
+      }).select('_id');
+      const movieIds = matchingMovies.map((m) => m._id);
+      filter.movieId = { $in: movieIds };
+    }
+
+    const sortOrder = sort === 'desc' ? -1 : 1;
+
+    let limitNum = 50;
+    if (limit === 'all') {
+      limitNum = 500;
+    } else {
+      limitNum = Math.min(200, Math.max(1, parseInt(limit, 10) || 50));
     }
 
     const pageNum = Math.max(1, parseInt(page, 10));
-    const limitNum = Math.min(100, Math.max(1, parseInt(limit, 10)));
-    const skip = (pageNum - 1) * limitNum;
+    const skip = limit === 'all' ? 0 : (pageNum - 1) * limitNum;
 
     const [shows, total] = await Promise.all([
       Show.find(filter)
-        .populate('movieId', 'title posterUrl durationMinutes certificate')
+        .populate('movieId', 'title posterUrl durationMinutes certificate languages formats')
         .populate('theatreId', 'name city')
-        .populate('screenId', 'name totalSeats')
-        .sort({ startTime: -1 })
+        .populate('screenId', 'name totalSeats soundSystem')
+        .sort({ startTime: sortOrder })
         .skip(skip)
         .limit(limitNum)
         .lean(),
       Show.countDocuments(filter),
     ]);
 
-    return res.status(200).json({ shows, total, page: pageNum });
+    const totalPages = Math.ceil(total / limitNum) || 1;
+
+    return res.status(200).json({
+      shows,
+      total,
+      page: pageNum,
+      totalPages,
+      limit: limitNum,
+    });
   } catch (error) {
     next(error);
   }
@@ -628,6 +608,7 @@ export async function getAdminShowSeatsHandler(req, res, next) {
 // 6. Bookings Inspector & Ticket Gate Verification
 export async function getAdminBookings(req, res, next) {
   try {
+    await cleanupExpiredHolds();
     const { q, status, showId, page = 1, limit = 20 } = req.query;
     const filter = {};
 
@@ -756,6 +737,35 @@ export async function verifyTicketGate(req, res, next) {
       booking,
       verifiedAt: booking.verifiedAt,
     });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function deleteAdminBooking(req, res, next) {
+  try {
+    const booking = await Booking.findById(req.params.id);
+    if (!booking) {
+      return res.status(404).json({ error: MESSAGES.BOOKING_NOT_FOUND });
+    }
+
+    // Release any seats that were held or reserved by this booking
+    await ShowSeat.updateMany(
+      { bookingId: booking._id },
+      {
+        $set: {
+          status: SEAT_STATUS.AVAILABLE,
+          heldBy: undefined,
+          holdExpiresAt: undefined,
+          bookingId: undefined,
+        },
+      }
+    );
+
+    await Booking.findByIdAndDelete(req.params.id);
+    await logAudit(req.user, 'DELETE', 'BOOKING', booking._id, booking.toObject(), null, req.ip);
+
+    return res.status(200).json({ message: 'Booking removed successfully from ledger.' });
   } catch (error) {
     next(error);
   }

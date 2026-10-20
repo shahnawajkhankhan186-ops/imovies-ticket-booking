@@ -20,6 +20,7 @@ import {
   getAdminShowSeatsHandler,
   getAdminBookings,
   getAdminBookingById,
+  deleteAdminBooking,
   verifyTicketGate,
   getAdminPayments,
   getAdminRefunds,
@@ -76,6 +77,7 @@ router.get('/shows/:id/seats', getAdminShowSeatsHandler);
 // Bookings & Verification
 router.get('/bookings', getAdminBookings);
 router.get('/bookings/:id', getAdminBookingById);
+router.delete('/bookings/:id', deleteAdminBooking);
 router.post('/bookings/verify', verifyTicketGate);
 
 // Payments & Refunds
