@@ -179,7 +179,7 @@ export default function AdminShowsPage() {
     <div>
       <div className="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
         <div>
-          <h2 className="fw-bold m-0">Showtime Scheduler</h2>
+          <h2 className="fw-bold m-0 fs-3 fs-sm-2">Showtime Scheduler</h2>
           <p className="text-secondary small m-0">Schedule screenings, manage category pricing, and monitor live seat occupancy.</p>
         </div>
 
@@ -187,7 +187,7 @@ export default function AdminShowsPage() {
           variant="primary"
           onClick={handleOpenCreate}
           disabled={movies.length === 0 || screens.length === 0}
-          className="d-flex align-items-center gap-2"
+          className="d-flex align-items-center justify-content-center gap-2 w-100 w-sm-auto"
         >
           <Plus size={16} />
           <span>Schedule New Show</span>
@@ -195,8 +195,8 @@ export default function AdminShowsPage() {
       </div>
 
       {/* Filter */}
-      <div className="im-glass p-3 rounded-4 mb-4 d-flex gap-3">
-        <div style={{ minWidth: '220px' }}>
+      <div className="im-glass p-3 rounded-4 mb-4 d-flex flex-wrap gap-2 gap-sm-3">
+        <div className="w-100 w-sm-auto" style={{ minWidth: '220px' }}>
           <select
             className="form-select text-light"
             value={theatreFilter}
@@ -214,7 +214,7 @@ export default function AdminShowsPage() {
       </div>
 
       {/* Shows Table */}
-      <div className="im-glass p-4 rounded-4">
+      <div className="im-glass p-3 p-sm-4 rounded-4">
         {loading ? (
           <div className="text-center py-5">
             <LoadingSpinner message="Loading scheduled screenings..." />
@@ -224,8 +224,8 @@ export default function AdminShowsPage() {
             No shows scheduled. Click &quot;Schedule New Show&quot; to add one.
           </div>
         ) : (
-          <div className="table-responsive">
-            <table className="table table-dark table-hover align-middle mb-0" style={{ background: 'transparent' }}>
+          <div className="table-responsive touch-scroll">
+            <table className="table table-dark table-hover align-middle mb-0 text-nowrap" style={{ background: 'transparent' }}>
               <thead>
                 <tr className="text-secondary small text-uppercase">
                   <th>Movie</th>
@@ -403,7 +403,7 @@ export default function AdminShowsPage() {
               <div className="p-3 rounded-3" style={{ background: '#121624', border: '1px solid #242c44' }}>
                 <div className="fw-semibold text-light mb-2 small text-uppercase">Seat Category Pricing (in INR ₹)</div>
                 <div className="row g-2">
-                  <div className="col-4">
+                  <div className="col-12 col-sm-4">
                     <Input
                       type="number"
                       label="RECLINER / VIP Row (₹)"
@@ -412,7 +412,7 @@ export default function AdminShowsPage() {
                       required
                     />
                   </div>
-                  <div className="col-4">
+                  <div className="col-12 col-sm-4">
                     <Input
                       type="number"
                       label="PREMIUM Row (₹)"
@@ -421,7 +421,7 @@ export default function AdminShowsPage() {
                       required
                     />
                   </div>
-                  <div className="col-4">
+                  <div className="col-12 col-sm-4">
                     <Input
                       type="number"
                       label="REGULAR Row (₹)"

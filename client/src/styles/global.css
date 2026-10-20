@@ -99,3 +99,110 @@ a {
   }
 }
 
+/* ==========================================================================
+   Mobile-First Responsive Layout & Interaction Enhancements
+   ========================================================================== */
+
+/* Hide scrollbar while preserving smooth touch scrolling */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Smooth Touch Scrolling Container */
+.touch-scroll {
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+}
+
+/* Mobile responsive typography adjustments */
+@media (max-width: 767.98px) {
+  h1, .display-4, .display-5 {
+    font-size: calc(1.5rem + 1.2vw) !important;
+    line-height: 1.2 !important;
+  }
+  h2 {
+    font-size: calc(1.3rem + 0.8vw) !important;
+  }
+  h3 {
+    font-size: 1.25rem !important;
+  }
+
+  /* Compact glass card padding on phones */
+  .im-glass, .im-card {
+    border-radius: 14px;
+  }
+
+  /* Responsive table padding */
+  .table > :not(caption) > * > * {
+    padding: 0.6rem 0.5rem;
+    font-size: 0.85rem;
+  }
+
+  /* Safe Area Padding for modern phones */
+  .safe-bottom {
+    padding-bottom: calc(1rem + env(safe-area-inset-bottom, 0px)) !important;
+  }
+}
+
+/* Mobile Pinned Bottom Checkout Bar */
+.mobile-sticky-bottom {
+  position: sticky;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 1040;
+  padding-bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px));
+  box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.6);
+  border-top: 1px solid var(--border-subtle);
+  background: rgba(18, 22, 36, 0.95);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+/* Admin Mobile Drawer & Backdrop */
+.admin-drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  z-index: 1045;
+  transition: opacity var(--transition-normal);
+}
+
+.admin-mobile-drawer {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 280px;
+  max-width: 85vw;
+  background: var(--bg-surface);
+  border-right: 1px solid var(--border-subtle);
+  z-index: 1050;
+  overflow-y: auto;
+  box-shadow: 8px 0 32px rgba(0, 0, 0, 0.6);
+  transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  flex-direction: column;
+}
+
+/* Mobile Quick Tabs pill bar */
+.admin-mobile-tabs {
+  overflow-x: auto;
+  white-space: nowrap;
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.25rem 0;
+  -webkit-overflow-scrolling: touch;
+}
+
+.admin-mobile-tabs::-webkit-scrollbar {
+  display: none;
+}
+

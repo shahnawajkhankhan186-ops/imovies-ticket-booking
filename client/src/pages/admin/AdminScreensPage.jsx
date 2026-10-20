@@ -163,7 +163,7 @@ export default function AdminScreensPage() {
     <div>
       <div className="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
         <div>
-          <h2 className="fw-bold m-0">Auditoriums & Seat Layouts</h2>
+          <h2 className="fw-bold m-0 fs-3 fs-sm-2">Auditoriums & Seat Layouts</h2>
           <p className="text-secondary small m-0">Configure screens, sound specs, and visual seating arrangements.</p>
         </div>
 
@@ -171,14 +171,14 @@ export default function AdminScreensPage() {
           variant="primary"
           onClick={handleOpenCreate}
           disabled={theatres.length === 0}
-          className="d-flex align-items-center gap-2"
+          className="d-flex align-items-center justify-content-center gap-2 w-100 w-sm-auto"
         >
           <Plus size={16} />
           <span>Add New Screen</span>
         </Button>
       </div>
 
-      <div className="im-glass p-4 rounded-4">
+      <div className="im-glass p-3 p-sm-4 rounded-4">
         {loading ? (
           <div className="text-center py-5">
             <LoadingSpinner message="Loading auditoriums..." />
@@ -188,8 +188,8 @@ export default function AdminScreensPage() {
             No screens configured yet. Add a cinema theatre first, then create an auditorium screen.
           </div>
         ) : (
-          <div className="table-responsive">
-            <table className="table table-dark table-hover align-middle mb-0" style={{ background: 'transparent' }}>
+          <div className="table-responsive touch-scroll">
+            <table className="table table-dark table-hover align-middle mb-0 text-nowrap" style={{ background: 'transparent' }}>
               <thead>
                 <tr className="text-secondary small text-uppercase">
                   <th>Screen Name</th>

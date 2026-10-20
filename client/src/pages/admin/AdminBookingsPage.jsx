@@ -42,13 +42,13 @@ export default function AdminBookingsPage() {
   return (
     <div>
       <div className="mb-4">
-        <h2 className="fw-bold m-0">Customer Bookings Ledger</h2>
+        <h2 className="fw-bold m-0 fs-3 fs-sm-2">Customer Bookings Ledger</h2>
         <p className="text-secondary small m-0">Master audit ledger of all user reservations, ticket codes, and transactions.</p>
       </div>
 
       {/* Filter Bar */}
-      <div className="im-glass p-3 rounded-4 mb-4 d-flex flex-wrap gap-3">
-        <div className="flex-grow-1" style={{ minWidth: '220px' }}>
+      <div className="im-glass p-3 rounded-4 mb-4 d-flex flex-wrap gap-2 gap-sm-3">
+        <div className="flex-grow-1" style={{ minWidth: '180px' }}>
           <div className="input-group">
             <span className="input-group-text bg-transparent border-secondary text-secondary">
               <Search size={16} />
@@ -64,7 +64,7 @@ export default function AdminBookingsPage() {
           </div>
         </div>
 
-        <div style={{ minWidth: '180px' }}>
+        <div className="w-100 w-sm-auto" style={{ minWidth: '160px' }}>
           <select
             className="form-select text-light"
             value={statusFilter}
@@ -82,7 +82,7 @@ export default function AdminBookingsPage() {
       </div>
 
       {/* Bookings Table */}
-      <div className="im-glass p-4 rounded-4">
+      <div className="im-glass p-3 p-sm-4 rounded-4">
         {loading ? (
           <div className="text-center py-5">
             <LoadingSpinner message="Querying booking ledger..." />
@@ -93,8 +93,8 @@ export default function AdminBookingsPage() {
           </div>
         ) : (
           <div>
-            <div className="table-responsive">
-              <table className="table table-dark table-hover align-middle mb-0" style={{ background: 'transparent' }}>
+            <div className="table-responsive touch-scroll">
+              <table className="table table-dark table-hover align-middle mb-0 text-nowrap" style={{ background: 'transparent' }}>
                 <thead>
                   <tr className="text-secondary small text-uppercase">
                     <th>Ref Code</th>

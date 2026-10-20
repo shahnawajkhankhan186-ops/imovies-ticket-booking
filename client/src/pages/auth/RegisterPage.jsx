@@ -51,8 +51,8 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="container py-5 d-flex justify-content-center align-items-center min-vh-75">
-      <div className="im-glass p-4 p-md-5 rounded-4 shadow-lg w-100" style={{ maxWidth: '480px' }}>
+    <div className="container py-4 py-md-5 d-flex justify-content-center align-items-center min-vh-75">
+      <div className="im-glass p-3 p-sm-4 p-md-5 rounded-4 shadow-lg w-100" style={{ maxWidth: '480px' }}>
         <div className="text-center mb-4">
           <Link to="/" className="d-inline-flex align-items-center gap-2 text-decoration-none mb-3">
             <Film size={36} color="var(--primary-color)" />

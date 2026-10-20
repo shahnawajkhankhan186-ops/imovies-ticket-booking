@@ -58,21 +58,21 @@ export default function HomePage() {
       {/* Hero Section */}
       {heroMovie && (
         <div
-          className="position-relative w-100 overflow-hidden mb-5"
+          className="position-relative w-100 overflow-hidden mb-4 mb-md-5"
           style={{
-            minHeight: '440px',
+            minHeight: '380px',
             background: `linear-gradient(to top, var(--bg-main) 10%, rgba(10, 12, 19, 0.4) 60%, rgba(10, 12, 19, 0.8) 100%), url(${
               heroMovie.bannerUrl || heroMovie.posterUrl
             }) center/cover no-repeat`,
           }}
         >
-          <div className="container h-100 d-flex flex-column justify-content-end py-5" style={{ minHeight: '440px' }}>
+          <div className="container h-100 d-flex flex-column justify-content-end py-4 py-md-5" style={{ minHeight: '380px' }}>
             <div style={{ maxWidth: '640px' }}>
-              <span className="badge bg-danger px-3 py-1 text-uppercase fw-bold mb-2">
+              <span className="badge bg-danger px-2.5 py-1 text-uppercase fw-bold mb-2" style={{ fontSize: '11px' }}>
                 Featured Spotlight
               </span>
-              <h1 className="display-4 fw-extrabold text-white mb-2">{heroMovie.title}</h1>
-              <div className="d-flex align-items-center gap-3 text-secondary small mb-3">
+              <h1 className="display-6 display-md-4 fw-extrabold text-white mb-2">{heroMovie.title}</h1>
+              <div className="d-flex flex-wrap align-items-center gap-2 gap-sm-3 text-secondary small mb-3">
                 <span className="badge bg-dark border border-secondary">{heroMovie.certificate}</span>
                 <span>{heroMovie.languages?.join(', ')}</span>
                 <span>•</span>
@@ -83,15 +83,15 @@ export default function HomePage() {
               <p className="text-light opacity-90 line-clamp-3 mb-4 fs-6">
                 {heroMovie.synopsis}
               </p>
-              <div className="d-flex flex-wrap gap-3">
-                <Link to={`/movies/${heroMovie._id}`} className="btn btn-danger btn-lg px-4 py-2 fw-semibold">
+              <div className="d-flex flex-column flex-sm-row gap-2 gap-sm-3">
+                <Link to={`/movies/${heroMovie._id}`} className="btn btn-danger btn-lg px-4 py-2 fw-semibold w-100 w-sm-auto text-center">
                   Book Tickets
                 </Link>
                 {heroMovie.trailerUrl && (
                   <button
                     type="button"
                     onClick={() => setTrailerMovie(heroMovie)}
-                    className="btn btn-outline-light btn-lg px-4 py-2 d-flex align-items-center gap-2 fw-semibold"
+                    className="btn btn-outline-light btn-lg px-4 py-2 d-flex align-items-center justify-content-center gap-2 fw-semibold w-100 w-sm-auto"
                   >
                     <Play size={18} fill="#ffffff" />
                     <span>Watch Trailer</span>
@@ -107,9 +107,9 @@ export default function HomePage() {
       <div className="container">
         {/* Search & Filter Bar */}
         <div className="im-glass p-3 rounded-4 mb-4">
-          <div className="row g-3 align-items-center">
+          <div className="row g-2 g-sm-3 align-items-center">
             {/* Search */}
-            <div className="col-lg-5">
+            <div className="col-12 col-lg-5">
               <form onSubmit={handleSearchSubmit} className="input-group">
                 <span className="input-group-text bg-dark border-secondary text-secondary">
                   <Search size={18} />
@@ -128,7 +128,7 @@ export default function HomePage() {
             </div>
 
             {/* Genre Filter */}
-            <div className="col-sm-6 col-lg-3">
+            <div className="col-6 col-lg-3">
               <select
                 value={selectedGenre}
                 onChange={(e) => setSelectedGenre(e.target.value)}
@@ -144,7 +144,7 @@ export default function HomePage() {
             </div>
 
             {/* Language Filter */}
-            <div className="col-sm-6 col-lg-3">
+            <div className="col-6 col-lg-3">
               <select
                 value={selectedLanguage}
                 onChange={(e) => setSelectedLanguage(e.target.value)}
@@ -160,7 +160,7 @@ export default function HomePage() {
             </div>
 
             {/* Clear Filters */}
-            <div className="col-lg-1 text-end">
+            <div className="col-12 col-lg-1 text-center text-lg-end">
               {(searchQuery || selectedGenre || selectedLanguage) && (
                 <button
                   type="button"
@@ -171,20 +171,20 @@ export default function HomePage() {
                   }}
                   className="btn btn-sm btn-link text-secondary text-decoration-none"
                 >
-                  Clear
+                  Clear Filters
                 </button>
               )}
             </div>
           </div>
         </div>
 
-        {/* Status Tabs */}
-        <div className="d-flex align-items-center justify-content-between border-bottom border-secondary border-opacity-25 mb-4">
-          <div className="d-flex gap-4">
+        {/* Status Tabs with Horizontal Touch Scroll */}
+        <div className="overflow-x-auto touch-scroll no-scrollbar border-bottom border-secondary border-opacity-25 mb-4">
+          <div className="d-flex gap-3 gap-sm-4" style={{ minWidth: 'max-content' }}>
             <button
               type="button"
               onClick={() => setActiveTab('NOW_SHOWING')}
-              className={`btn btn-link text-decoration-none pb-3 px-2 position-relative fw-bold fs-5 ${
+              className={`btn btn-link text-decoration-none pb-3 px-2 position-relative fw-bold fs-6 fs-sm-5 ${
                 activeTab === 'NOW_SHOWING' ? 'text-danger' : 'text-secondary hover-text-white'
               }`}
             >
@@ -200,7 +200,7 @@ export default function HomePage() {
             <button
               type="button"
               onClick={() => setActiveTab('UPCOMING')}
-              className={`btn btn-link text-decoration-none pb-3 px-2 position-relative fw-bold fs-5 ${
+              className={`btn btn-link text-decoration-none pb-3 px-2 position-relative fw-bold fs-6 fs-sm-5 ${
                 activeTab === 'UPCOMING' ? 'text-danger' : 'text-secondary hover-text-white'
               }`}
             >
@@ -228,7 +228,7 @@ export default function HomePage() {
             }
           />
         ) : (
-          <div className="row row-cols-2 row-cols-md-3 row-cols-lg-4 g-4">
+          <div className="row row-cols-2 row-cols-md-3 row-cols-lg-4 g-2 g-sm-3 g-md-4">
             {movies.map((movie) => (
               <div key={movie._id} className="col">
                 <MovieCard movie={movie} />

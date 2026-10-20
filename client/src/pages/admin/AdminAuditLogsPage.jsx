@@ -33,7 +33,7 @@ export default function AdminAuditLogsPage() {
         <p className="text-secondary small m-0">Immutable compliance record of administrative changes, deletions, and config edits.</p>
       </div>
 
-      <div className="im-glass p-4 rounded-4">
+      <div className="im-glass p-3 p-sm-4 rounded-4">
         {loading ? (
           <div className="text-center py-5">
             <LoadingSpinner message="Querying audit records..." />
@@ -41,8 +41,8 @@ export default function AdminAuditLogsPage() {
         ) : logs.length === 0 ? (
           <div className="text-center py-5 text-secondary">No administrative mutations recorded yet.</div>
         ) : (
-          <div className="table-responsive">
-            <table className="table table-dark table-hover align-middle mb-0" style={{ background: 'transparent' }}>
+          <div className="table-responsive touch-scroll">
+            <table className="table table-dark table-hover align-middle mb-0 text-nowrap" style={{ background: 'transparent' }}>
               <thead>
                 <tr className="text-secondary small text-uppercase">
                   <th>Action</th>

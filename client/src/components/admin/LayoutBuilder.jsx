@@ -201,8 +201,8 @@ export default function LayoutBuilder({ initialLayout, onSave, loading = false }
       </div>
 
       {/* Interactive Grid */}
-      <div className="p-3 rounded-4 bg-dark border border-secondary overflow-x-auto d-flex justify-content-center">
-        <div className="d-flex flex-column align-items-center" style={{ minWidth: 'max-content' }}>
+      <div className="p-2 p-sm-3 rounded-4 bg-dark border border-secondary overflow-x-auto touch-scroll text-center" style={{ WebkitOverflowScrolling: 'touch' }}>
+        <div className="d-inline-flex flex-column align-items-center" style={{ minWidth: 'max-content', margin: '0 auto' }}>
           {Array.from({ length: rows }, (_, rIdx) => {
             const r = rIdx + 1;
             const rowChar = ROW_LETTERS[r - 1] || `R${r}`;

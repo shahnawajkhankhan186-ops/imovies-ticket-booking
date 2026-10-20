@@ -142,19 +142,19 @@ export default function AdminMoviesPage() {
     <div>
       <div className="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
         <div>
-          <h2 className="fw-bold m-0">Movie Catalog</h2>
+          <h2 className="fw-bold m-0 fs-3 fs-sm-2">Movie Catalog</h2>
           <p className="text-secondary small m-0">Manage cinematic titles, media banners, and screening statuses.</p>
         </div>
 
-        <Button variant="primary" onClick={handleOpenCreate} className="d-flex align-items-center gap-2">
+        <Button variant="primary" onClick={handleOpenCreate} className="d-flex align-items-center justify-content-center gap-2 w-100 w-sm-auto">
           <Plus size={16} />
           <span>Add New Movie</span>
         </Button>
       </div>
 
       {/* Filter Bar */}
-      <div className="im-glass p-3 rounded-4 mb-4 d-flex flex-wrap gap-3">
-        <div className="flex-grow-1" style={{ minWidth: '220px' }}>
+      <div className="im-glass p-3 rounded-4 mb-4 d-flex flex-wrap gap-2 gap-sm-3">
+        <div className="flex-grow-1" style={{ minWidth: '180px' }}>
           <div className="input-group">
             <span className="input-group-text bg-transparent border-secondary text-secondary">
               <Search size={16} />
@@ -170,7 +170,7 @@ export default function AdminMoviesPage() {
           </div>
         </div>
 
-        <div style={{ minWidth: '180px' }}>
+        <div className="w-100 w-sm-auto" style={{ minWidth: '160px' }}>
           <select
             className="form-select text-light"
             value={statusFilter}
@@ -186,7 +186,7 @@ export default function AdminMoviesPage() {
       </div>
 
       {/* Movies Table */}
-      <div className="im-glass p-4 rounded-4">
+      <div className="im-glass p-3 p-sm-4 rounded-4">
         {loading ? (
           <div className="text-center py-5">
             <LoadingSpinner message="Loading catalog..." />
@@ -196,8 +196,8 @@ export default function AdminMoviesPage() {
             No movies found. Click &quot;Add New Movie&quot; to add one.
           </div>
         ) : (
-          <div className="table-responsive">
-            <table className="table table-dark table-hover align-middle mb-0" style={{ background: 'transparent' }}>
+          <div className="table-responsive touch-scroll">
+            <table className="table table-dark table-hover align-middle mb-0 text-nowrap" style={{ background: 'transparent' }}>
               <thead>
                 <tr className="text-secondary small text-uppercase">
                   <th>Movie</th>

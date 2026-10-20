@@ -79,7 +79,7 @@ export default function AdminReportsPage() {
       </div>
 
       {/* Date Range Selector */}
-      <div className="im-glass p-4 rounded-4 mb-4">
+      <div className="im-glass p-3 p-sm-4 rounded-4 mb-4">
         <h5 className="fw-bold mb-3 d-flex align-items-center gap-2">
           <Calendar size={18} className="text-danger" />
           <span>Report Reporting Date Range</span>
@@ -115,10 +115,10 @@ export default function AdminReportsPage() {
       </div>
 
       {/* Report Cards Grid */}
-      <div className="row g-4">
+      <div className="row g-3 g-sm-4">
         {reports.map((rep) => (
           <div key={rep.id} className="col-12 col-lg-4">
-            <div className="im-glass p-4 rounded-4 h-100 d-flex flex-column justify-content-between">
+            <div className="im-glass p-3 p-sm-4 rounded-4 h-100 d-flex flex-column justify-content-between">
               <div>
                 <div className="p-3 rounded-3 bg-danger bg-opacity-25 text-danger d-inline-block mb-3">
                   <FileSpreadsheet size={24} />

@@ -60,10 +60,10 @@ export default function AdminVerifyTicketPage() {
         <p className="text-secondary small m-0">Scan customer QR codes or enter booking references to admit moviegoers.</p>
       </div>
 
-      <div className="row g-4 mb-4">
+      <div className="row g-3 g-sm-4 mb-4">
         {/* Verification Form */}
         <div className="col-12 col-lg-6">
-          <div className="im-glass p-4 rounded-4 h-100">
+          <div className="im-glass p-3 p-sm-4 rounded-4 h-100">
             <h5 className="fw-bold mb-3 d-flex align-items-center gap-2">
               <ScanLine size={20} className="text-danger" />
               <span>Enter Ticket Reference Code</span>
@@ -100,7 +100,7 @@ export default function AdminVerifyTicketPage() {
 
         {/* Verification Result Card */}
         <div className="col-12 col-lg-6">
-          <div className="im-glass p-4 rounded-4 h-100">
+          <div className="im-glass p-3 p-sm-4 rounded-4 h-100">
             <h5 className="fw-bold mb-3">Admission Decision</h5>
 
             {!result ? (

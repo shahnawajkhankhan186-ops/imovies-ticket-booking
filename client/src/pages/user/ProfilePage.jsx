@@ -126,27 +126,27 @@ export default function ProfilePage() {
       <div className="row g-4">
         {/* Left Column: Profile Card & Edit */}
         <div className="col-lg-6">
-          <div className="im-glass p-4 rounded-4 mb-4">
-            <div className="d-flex align-items-center gap-3 mb-4">
+          <div className="im-glass p-3 p-sm-4 rounded-4 mb-4">
+            <div className="d-flex flex-wrap align-items-center gap-3 mb-4">
               {user.avatar ? (
                 <img
                   src={user.avatar}
                   alt={user.name}
                   className="rounded-circle shadow"
-                  style={{ width: '64px', height: '64px', objectFit: 'cover' }}
+                  style={{ width: '56px', height: '56px', objectFit: 'cover' }}
                   referrerPolicy="no-referrer"
                 />
               ) : (
                 <div
-                  className="rounded-circle d-flex align-items-center justify-content-center text-white fw-bold fs-3 shadow"
-                  style={{ width: '64px', height: '64px', background: 'var(--primary-gradient)' }}
+                  className="rounded-circle d-flex align-items-center justify-content-center text-white fw-bold fs-4 shadow"
+                  style={{ width: '56px', height: '56px', background: 'var(--primary-gradient)' }}
                 >
                   {user.name?.charAt(0)?.toUpperCase() || 'U'}
                 </div>
               )}
-              <div className="flex-grow-1">
+              <div className="flex-grow-1" style={{ minWidth: '200px' }}>
                 <div className="d-flex align-items-center justify-content-between flex-wrap gap-2">
-                  <h4 className="fw-bold m-0">{user.name}</h4>
+                  <h4 className="fw-bold m-0 fs-5 fs-sm-4">{user.name}</h4>
                   <button
                     type="button"
                     onClick={handleLogout}
@@ -211,7 +211,7 @@ export default function ProfilePage() {
           </div>
 
           {/* Change Password Card */}
-          <div className="im-glass p-4 rounded-4">
+          <div className="im-glass p-3 p-sm-4 rounded-4">
             <form onSubmit={handleChangePassword}>
               <h5 className="fw-bold mb-3 d-flex align-items-center gap-2">
                 <Lock size={18} className="text-danger" />
@@ -260,7 +260,7 @@ export default function ProfilePage() {
 
         {/* Right Column: User's Movie Reviews */}
         <div className="col-lg-6">
-          <div className="im-glass p-4 rounded-4">
+          <div className="im-glass p-3 p-sm-4 rounded-4">
             <h5 className="fw-bold mb-3 d-flex align-items-center gap-2">
               <Star size={18} className="text-warning" />
               <span>My Movie Reviews ({reviews.length})</span>

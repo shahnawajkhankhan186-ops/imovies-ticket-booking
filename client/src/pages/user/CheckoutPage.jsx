@@ -266,22 +266,22 @@ export default function CheckoutPage() {
         )}
       </div>
 
-      <div className="row g-4">
+      <div className="row g-3 g-md-4">
         {/* Left Column: Show & Seat Summary */}
-        <div className="col-lg-7">
-          <div className="im-glass p-4 rounded-4 mb-4">
-            <div className="d-flex gap-3 mb-4">
+        <div className="col-12 col-lg-7">
+          <div className="im-glass p-3 p-sm-4 rounded-4 mb-3 mb-md-4">
+            <div className="d-flex gap-3 mb-3 mb-sm-4">
               <img
                 src={movie?.posterUrl || 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=400'}
                 alt={movie?.title}
-                className="rounded-3 shadow"
-                style={{ width: '100px', height: '145px', objectFit: 'cover' }}
+                className="rounded-3 shadow flex-shrink-0"
+                style={{ width: '80px', height: '116px', objectFit: 'cover' }}
               />
-              <div>
-                <div className="d-flex align-items-center gap-2 mb-1">
-                  <h4 className="fw-bold m-0">{movie?.title}</h4>
+              <div className="flex-grow-1 min-w-0">
+                <div className="d-flex flex-wrap align-items-center gap-2 mb-1">
+                  <h4 className="fw-bold m-0 text-truncate" style={{ maxWidth: '100%' }}>{movie?.title}</h4>
                   {movie?.certificate && (
-                    <span className="badge bg-secondary">{movie.certificate}</span>
+                    <span className="badge bg-secondary" style={{ fontSize: '10px' }}>{movie.certificate}</span>
                   )}
                 </div>
                 <div className="text-secondary small d-flex align-items-center gap-2 mb-2">
@@ -384,9 +384,9 @@ export default function CheckoutPage() {
         </div>
 
         {/* Right Column: Price Breakdown & Pay */}
-        <div className="col-lg-5">
-          <div className="im-glass p-4 rounded-4">
-            <h5 className="fw-bold mb-4">Payment Breakdown</h5>
+        <div className="col-12 col-lg-5">
+          <div className="im-glass p-3 p-sm-4 rounded-4">
+            <h5 className="fw-bold mb-3 mb-sm-4">Payment Breakdown</h5>
 
             <div className="d-flex justify-content-between mb-2">
               <span className="text-secondary">Seat Subtotal ({booking.seats?.length} tickets)</span>
@@ -407,18 +407,18 @@ export default function CheckoutPage() {
 
             <hr style={{ borderColor: 'var(--border-color)' }} />
 
-            <div className="d-flex justify-content-between mb-4">
+            <div className="d-flex justify-content-between align-items-baseline mb-4">
               <span className="fs-5 fw-bold">Total Amount Payable</span>
-              <span className="fs-4 fw-bold text-danger">{formatINR(booking.total)}</span>
+              <span className="fs-3 fw-extrabold text-danger">{formatINR(booking.total)}</span>
             </div>
 
-            <div className="d-flex flex-column gap-3 mb-4">
+            <div className="d-flex flex-column gap-2.5 mb-4">
               <Button
                 variant="primary"
                 size="lg"
                 loading={paying}
                 onClick={handleSimulatePayment}
-                className="w-100 d-flex align-items-center justify-content-center gap-2"
+                className="w-100 d-flex align-items-center justify-content-center gap-2 py-2.5"
               >
                 <Zap size={18} />
                 <span>Simulate Instant Payment (Test Mode)</span>
@@ -429,15 +429,15 @@ export default function CheckoutPage() {
                 size="lg"
                 loading={paying}
                 onClick={handleRazorpayPayment}
-                className="w-100 d-flex align-items-center justify-content-center gap-2"
+                className="w-100 d-flex align-items-center justify-content-center gap-2 py-2.5"
               >
                 <CreditCard size={18} />
                 <span>Pay via Razorpay Modal</span>
               </Button>
             </div>
 
-            <div className="d-flex align-items-center justify-content-center gap-2 text-secondary small mb-4">
-              <ShieldCheck size={16} className="text-success" />
+            <div className="d-flex align-items-center justify-content-center gap-2 text-secondary small mb-3 text-center">
+              <ShieldCheck size={16} className="text-success flex-shrink-0" />
               <span>100% Secure Payment • Instant E-Ticket Confirmation</span>
             </div>
 
