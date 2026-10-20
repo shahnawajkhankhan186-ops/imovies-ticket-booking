@@ -106,6 +106,7 @@ export async function resumePayment(req, res, next) {
       orderId: orderId || `order_${booking.bookingCode}`,
       amount: booking.total,
       currency: 'INR',
+      keyId: env.RAZORPAY_KEY_ID || 'rzp_test_TpVOoKBVyu9znp',
       holdExpiresAt: booking.holdExpiresAt,
     });
   } catch (error) {

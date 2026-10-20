@@ -125,12 +125,16 @@ export default function CheckoutPage() {
     setPaying(true);
     try {
       const res = await api.post(`/user/bookings/${bookingId}/pay`);
-      const { orderId, amount, bookingCode } = res.data;
+      const { orderId, amount, bookingCode, keyId } = res.data;
 
-      const rzpKey = import.meta.env.VITE_RAZORPAY_KEY_ID || 'rzp_test_imovies_dummy_key_id';
+      const rzpKey = (keyId || import.meta.env.VITE_RAZORPAY_KEY_ID || 'rzp_test_TpVOoKBVyu9znp').trim();
 
-      if (!window.Razorpay) {
-        toast('Razorpay SDK not loaded in test mode. Falling back to test payment simulation.');
+      // Guard: If backend could not create a real Razorpay order or key is dummy, fallback to instant simulation
+      const isDummyOrder = !orderId || orderId.startsWith(`order_${bookingCode}`);
+      const isDummyKey = !rzpKey || rzpKey.includes('dummy');
+
+      if (!window.Razorpay || isDummyOrder || isDummyKey) {
+        toast('Completing booking with instant test confirmation...', { icon: '⚡' });
         await handleSimulatePayment();
         return;
       }
