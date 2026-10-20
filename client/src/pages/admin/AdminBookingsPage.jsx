@@ -24,20 +24,6 @@ export default function AdminBookingsPage() {
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleting, setDeleting] = useState(false);
 
-  const handleDeleteBooking = async () => {
-    if (!deleteTarget) return;
-    setDeleting(true);
-    try {
-      await api.delete(`/admin/bookings/${deleteTarget._id}`);
-      toast.success(`Booking #${deleteTarget.bookingCode} removed successfully`);
-      setDeleteTarget(null);
-      fetchBookings();
-    } catch (err) {
-      toast.error(err.message || 'Failed to delete booking');
-    } finally {
-      setDeleting(false);
-    }
-  };
 
   const fetchBookings = useCallback(async () => {
     try {
@@ -58,6 +44,21 @@ export default function AdminBookingsPage() {
   useEffect(() => {
     fetchBookings();
   }, [fetchBookings]);
+
+  const handleDeleteBooking = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
+      await api.delete(`/admin/bookings/${deleteTarget._id}`);
+      toast.success(`Booking #${deleteTarget.bookingCode} removed successfully`);
+      setDeleteTarget(null);
+      fetchBookings();
+    } catch (err) {
+      toast.error(err.message || 'Failed to delete booking');
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   return (
     <div>
@@ -95,8 +96,8 @@ export default function AdminBookingsPage() {
             <option value="CONFIRMED">Confirmed</option>
             <option value="USED">Used / Admitted</option>
             <option value="AWAITING_PAYMENT">Awaiting Payment</option>
-            <option value="CANCELLED">Cancelled</option>
             <option value="EXPIRED">Expired</option>
+            <option value="CANCELLED">Cancelled</option>
           </select>
         </div>
       </div>
