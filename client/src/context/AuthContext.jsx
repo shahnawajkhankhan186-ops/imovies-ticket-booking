@@ -1,9 +1,11 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import api from '../lib/api';
 
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
+  const navigate = useNavigate();
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -50,10 +52,13 @@ export function AuthProvider({ children }) {
   };
 
   const logout = async () => {
+    // Navigate immediately to landing page so ProtectedRoute doesn't bounce to /login
+    navigate('/', { replace: true });
     try {
       await api.post('/auth/logout');
     } finally {
       setUser(null);
+      navigate('/', { replace: true });
     }
   };
 

@@ -13,13 +13,12 @@ export default function ProfilePage() {
   const navigate = useNavigate();
 
   const handleLogout = async () => {
+    navigate('/', { replace: true });
     try {
       await logout();
       toast.success('Signed out successfully');
-      navigate('/');
     } catch {
       toast.success('Signed out');
-      navigate('/');
     }
   };
 

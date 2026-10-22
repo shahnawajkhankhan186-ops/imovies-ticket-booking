@@ -34,13 +34,12 @@ export default function Navbar() {
   const handleLogout = async () => {
     setUserDropdownOpen(false);
     setMobileMenuOpen(false);
+    navigate('/', { replace: true });
     try {
       await logout();
       toast.success('Signed out successfully');
-      navigate('/');
     } catch {
       toast.success('Signed out');
-      navigate('/');
     }
   };
 
