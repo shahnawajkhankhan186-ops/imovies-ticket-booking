@@ -1,11 +1,10 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   Film,
   Ticket,
   ShieldCheck,
   Zap,
-  Sparkles,
   QrCode,
   ArrowRight,
   Play,
@@ -17,7 +16,6 @@ import {
   TrendingUp,
   Lock,
   Calendar,
-  Users,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../../lib/api';
@@ -99,7 +97,6 @@ export default function LandingPage() {
     : featuredMovies.filter((m) => m.genres?.includes(selectedGenre));
 
   const currentMovie = featuredMovies[currentHeroIndex] || featuredMovies[0];
-  const heroBg = currentMovie?.bannerUrl || currentMovie?.posterUrl || 'https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=1600&auto=format&fit=crop&q=80';
 
   const formatRuntime = (mins) => {
     if (!mins) return '2h 15m';

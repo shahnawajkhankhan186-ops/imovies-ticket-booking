@@ -4,7 +4,7 @@ import api from '../../lib/api';
 import Input from '../../components/ui/Input';
 import Button from '../../components/ui/Button';
 import LoadingSpinner from '../../components/ui/LoadingSpinner';
-import { User, Lock, Phone, Mail, Shield, Star, Calendar, LogOut } from 'lucide-react';
+import { User, Lock, Mail, Star, LogOut } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 
