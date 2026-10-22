@@ -1,5 +1,6 @@
 import nodemailer from 'nodemailer';
 import { env } from '../config/env.js';
+import { generateTicketPDFBuffer } from './pdfTicket.js';
 
 let transporter = null;
 
@@ -49,6 +50,29 @@ export async function verifyTransport() {
 export async function sendBookingConfirmationEmail({ to, name, bookingCode, movieTitle, theatreName, showDate, showTime, seats, totalFormatted }) {
   try {
     const t = await getTransporter();
+
+    // Generate in-memory PDF ticket buffer
+    const attachments = [];
+    try {
+      const pdfBuffer = await generateTicketPDFBuffer({
+        bookingCode,
+        movieTitle,
+        theatreName,
+        showDate,
+        showTime,
+        seats,
+        totalFormatted,
+        name,
+      });
+      attachments.push({
+        filename: `IMovies_Ticket_${bookingCode}.pdf`,
+        content: pdfBuffer,
+        contentType: 'application/pdf',
+      });
+    } catch (pdfErr) {
+      console.warn('[MAILER WARN] PDF ticket generation skipped:', pdfErr.message);
+    }
+
     const mailOptions = {
       from: process.env.SMTP_FROM || '"IMovies Ticketing" <tickets@imovies.com>',
       to,
@@ -57,7 +81,7 @@ export async function sendBookingConfirmationEmail({ to, name, bookingCode, movi
         <div style="font-family: Arial, sans-serif; background: #0f1016; color: #ffffff; padding: 24px; border-radius: 8px; max-width: 560px; margin: auto;">
           <h2 style="color: #e50914; margin-top: 0;">IMovies — Ticket Confirmation</h2>
           <p>Hi <strong>${name || 'Moviegoer'}</strong>,</p>
-          <p>Your tickets have been confirmed! Please show this booking code at the cinema gate.</p>
+          <p>Your tickets have been confirmed! Please find your official entry <strong>PDF Ticket attached</strong> to this email, or show this booking code at the cinema gate.</p>
           
           <div style="background: #1a1c26; border-left: 4px solid #e50914; padding: 16px; border-radius: 4px; margin: 20px 0;">
             <p style="margin: 4px 0; font-size: 18px; font-weight: bold; color: #ffffff;">${movieTitle}</p>
@@ -68,9 +92,11 @@ export async function sendBookingConfirmationEmail({ to, name, bookingCode, movi
             <p style="margin: 12px 0 0 0; font-size: 16px; font-weight: bold; color: #ecc94b;">Booking Code: ${bookingCode}</p>
           </div>
 
+          <p style="color: #718096; font-size: 13px;">Attached: <strong>IMovies_Ticket_${bookingCode}.pdf</strong></p>
           <p style="color: #718096; font-size: 13px;">Thank you for booking with IMovies. Enjoy your movie!</p>
         </div>
       `,
+      attachments,
     };
 
     if (process.env.NODE_ENV === 'test') {
