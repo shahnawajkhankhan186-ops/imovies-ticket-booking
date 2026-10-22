@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
+import api from '../../lib/api';
 import Input from '../../components/ui/Input';
 import Button from '../../components/ui/Button';
 import AlertBanner from '../../components/ui/AlertBanner';
-import { Film } from 'lucide-react';
+import { Film, CheckCircle2, Mail, ShieldCheck } from 'lucide-react';
 import toast from 'react-hot-toast';
 import GoogleSignInButton from '../../components/auth/GoogleSignInButton';
 
@@ -20,8 +21,55 @@ export default function RegisterPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
+  // Email OTP verification state
+  const [isEmailVerified, setIsEmailVerified] = useState(false);
+  const [otpSent, setOtpSent] = useState(false);
+  const [otp, setOtp] = useState('');
+  const [sendingOtp, setSendingOtp] = useState(false);
+  const [verifyingOtp, setVerifyingOtp] = useState(false);
+
+  const handleSendOtp = async () => {
+    if (!email || !/^\S+@\S+\.\S+$/.test(email)) {
+      setError('Please enter a valid email address first');
+      return;
+    }
+    setSendingOtp(true);
+    setError(null);
+    try {
+      const res = await api.post('/auth/send-otp', { email: email.trim() });
+      setOtpSent(true);
+      toast.success(res.data.message || 'OTP sent to your Gmail inbox! Please check.');
+    } catch (err) {
+      setError(err.response?.data?.error || err.message || 'Failed to send verification OTP');
+    } finally {
+      setSendingOtp(false);
+    }
+  };
+
+  const handleVerifyOtp = async () => {
+    if (!otp || otp.trim().length !== 6) {
+      setError('Please enter the 6-digit verification OTP');
+      return;
+    }
+    setVerifyingOtp(true);
+    setError(null);
+    try {
+      const res = await api.post('/auth/verify-otp', { email: email.trim(), otp: otp.trim() });
+      setIsEmailVerified(true);
+      toast.success(res.data.message || 'Email verified successfully!');
+    } catch (err) {
+      setError(err.response?.data?.error || err.message || 'Invalid or expired OTP');
+    } finally {
+      setVerifyingOtp(false);
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!isEmailVerified) {
+      setError('Please verify your email address by clicking "Verify Email" and entering the OTP.');
+      return;
+    }
     if (password.length < 6) {
       setError('Password must be at least 6 characters');
       return;
@@ -42,9 +90,9 @@ export default function RegisterPage() {
         phone: phone.trim() || undefined,
       });
       toast.success(`Welcome to IMovies, ${user.name}!`);
-      navigate('/', { replace: true });
+      navigate('/movies', { replace: true });
     } catch (err) {
-      setError(err.message || 'Registration failed. Email may already be in use.');
+      setError(err.response?.data?.error || err.message || 'Registration failed. Email may already be in use.');
     } finally {
       setLoading(false);
     }
@@ -78,14 +126,79 @@ export default function RegisterPage() {
             autoFocus
           />
 
-          <Input
-            type="email"
-            label="Email Address"
-            placeholder="you@example.com"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-          />
+          {/* Email with OTP Verification Button */}
+          <div>
+            <div className="d-flex align-items-center justify-content-between mb-1.5">
+              <label className="form-label text-secondary small fw-medium m-0">
+                Email Address <span className="text-danger">*</span>
+              </label>
+              {isEmailVerified ? (
+                <span className="badge bg-success bg-opacity-25 text-success d-inline-flex align-items-center gap-1 small py-1 px-2">
+                  <CheckCircle2 size={12} />
+                  <span>Verified</span>
+                </span>
+              ) : null}
+            </div>
+
+            <div className="input-group">
+              <input
+                type="email"
+                className="form-control"
+                placeholder="you@gmail.com"
+                value={email}
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  if (isEmailVerified) setIsEmailVerified(false);
+                  if (otpSent) setOtpSent(false);
+                }}
+                disabled={isEmailVerified}
+                required
+                style={{ background: '#121624', border: '1px solid #242c44', color: '#fff' }}
+              />
+              {!isEmailVerified && (
+                <button
+                  type="button"
+                  onClick={handleSendOtp}
+                  disabled={sendingOtp || !email}
+                  className="btn btn-danger px-3 fw-medium"
+                >
+                  {sendingOtp ? 'Sending...' : otpSent ? 'Resend OTP' : 'Verify Email'}
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* 6-Digit OTP Input Box */}
+          {otpSent && !isEmailVerified && (
+            <div className="p-3 rounded-3" style={{ background: '#161927', border: '1px dashed #e50914' }}>
+              <label className="form-label text-light small fw-medium mb-1 d-flex align-items-center gap-1.5">
+                <Mail size={14} className="text-danger" />
+                <span>Enter 6-Digit OTP sent to your Gmail</span>
+              </label>
+              <div className="input-group">
+                <input
+                  type="text"
+                  maxLength={6}
+                  className="form-control text-center fw-bold text-light"
+                  placeholder="e.g. 583921"
+                  value={otp}
+                  onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
+                  style={{ background: '#0e101a', border: '1px solid #333d59', letterSpacing: '4px', fontSize: '18px' }}
+                />
+                <button
+                  type="button"
+                  onClick={handleVerifyOtp}
+                  disabled={verifyingOtp || otp.length !== 6}
+                  className="btn btn-success px-3 fw-medium"
+                >
+                  {verifyingOtp ? 'Checking...' : 'Confirm OTP'}
+                </button>
+              </div>
+              <div className="text-secondary mt-1.5" style={{ fontSize: '11px' }}>
+                A real verification code was dispatched to <strong>{email}</strong>. Valid for 10 minutes.
+              </div>
+            </div>
+          )}
 
           <Input
             type="tel"
@@ -113,8 +226,15 @@ export default function RegisterPage() {
             required
           />
 
-          <Button type="submit" variant="primary" size="lg" loading={loading} className="w-100 mt-2">
-            Create Account
+          <Button
+            type="submit"
+            variant="primary"
+            size="lg"
+            loading={loading}
+            disabled={!isEmailVerified}
+            className="w-100 mt-2"
+          >
+            {isEmailVerified ? 'Create Account' : 'Verify Email to Register'}
           </Button>
         </form>
 

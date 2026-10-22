@@ -49,7 +49,7 @@ export default function Navbar() {
       <div className="container">
         {/* Brand & City Wrapper */}
         <div className="d-flex align-items-center">
-          <Link to="/" className="navbar-brand d-flex align-items-center gap-2 fw-bold fs-4 m-0 py-0">
+          <Link to={user ? "/movies" : "/"} className="navbar-brand d-flex align-items-center gap-2 fw-bold fs-4 m-0 py-0">
             <Film size={26} className="text-danger flex-shrink-0" />
             <span className="text-light" style={{ letterSpacing: '1px' }}>
               IMOVIES
@@ -120,15 +120,17 @@ export default function Navbar() {
         >
           <ul className="navbar-nav align-items-lg-center gap-2 mt-3 mt-lg-0 pt-2 pt-lg-0 border-top border-lg-0 border-secondary border-opacity-25">
             <li className="nav-item">
-              <Link to="/landing" className="nav-link text-light px-3 py-2 rounded-3 hover-bg-dark" onClick={() => setMobileMenuOpen(false)}>
-                Features
-              </Link>
-            </li>
-            <li className="nav-item">
               <Link to="/" className="nav-link text-light px-3 py-2 rounded-3 hover-bg-dark" onClick={() => setMobileMenuOpen(false)}>
                 Home
               </Link>
             </li>
+            {user && (
+              <li className="nav-item">
+                <Link to="/movies" className="nav-link text-light px-3 py-2 rounded-3 hover-bg-dark" onClick={() => setMobileMenuOpen(false)}>
+                  Movies
+                </Link>
+              </li>
+            )}
 
             {user ? (
               <>

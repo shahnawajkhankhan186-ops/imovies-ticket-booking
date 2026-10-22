@@ -13,3 +13,4 @@ export { Favorite } from './Favorite.js';
 export { Favorite as favoriteModel } from './Favorite.js';
 export { AuditLog } from './AuditLog.js';
 export { Setting } from './Setting.js';
+export { EmailOtp } from './EmailOtp.js';

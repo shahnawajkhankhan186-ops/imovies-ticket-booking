@@ -54,6 +54,10 @@ const userSchema = new mongoose.Schema(
       enum: Object.values(USER_STATUS),
       default: USER_STATUS.ACTIVE,
     },
+    isEmailVerified: {
+      type: Boolean,
+      default: false,
+    },
     resetPasswordToken: {
       type: String,
       default: undefined,

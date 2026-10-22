@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import {
   Film,
   Ticket,
@@ -14,21 +14,25 @@ import {
   Heart,
   ChevronRight,
   TrendingUp,
+  Lock,
 } from 'lucide-react';
+import toast from 'react-hot-toast';
 import api from '../../lib/api';
 import { useAuth } from '../../hooks/useAuth';
 import TrailerModal from '../../components/movies/TrailerModal';
 
 export default function LandingPage() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [featuredMovies, setFeaturedMovies] = useState([]);
+  const [selectedGenre, setSelectedGenre] = useState('ALL');
   const [trailerMovie, setTrailerMovie] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function loadFeatured() {
       try {
-        const res = await api.get('/public/movies', { params: { limit: 6 } });
+        const res = await api.get('/public/movies', { params: { limit: 24 } });
         setFeaturedMovies(res.data.movies || []);
       } catch (err) {
         console.error('Failed to load landing movies:', err);
@@ -38,6 +42,35 @@ export default function LandingPage() {
     }
     loadFeatured();
   }, []);
+
+  const handleMovieClick = (movieId) => {
+    if (!user) {
+      toast('Please sign in or create an account to view showtimes & book seats!', {
+        icon: '🔒',
+        duration: 3500,
+      });
+      navigate('/login', { state: { from: `/movies/${movieId}` } });
+    } else {
+      navigate(`/movies/${movieId}`);
+    }
+  };
+
+  const handleExploreClick = () => {
+    if (!user) {
+      toast('Please sign in to access movies and cinema schedules!', {
+        icon: '🔒',
+        duration: 3500,
+      });
+      navigate('/login', { state: { from: '/movies' } });
+    } else {
+      navigate('/movies');
+    }
+  };
+
+  const genres = ['ALL', ...new Set(featuredMovies.flatMap((m) => m.genres || []))].slice(0, 7);
+  const displayedMovies = selectedGenre === 'ALL'
+    ? featuredMovies
+    : featuredMovies.filter((m) => m.genres?.includes(selectedGenre));
 
   const heroBg = featuredMovies[0]?.bannerUrl || featuredMovies[0]?.posterUrl || 'https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=1600&auto=format&fit=crop&q=80';
 
@@ -76,15 +109,16 @@ export default function LandingPage() {
               Welcome to <span className="text-danger" style={{ textShadow: '0 0 35px rgba(229, 9, 20, 0.6)' }}>iMovies</span>
             </h1>
 
-            {/* Subtitle matching syllabus requirements */}
+            {/* Subtitle */}
             <p className="lead text-secondary fs-5 mb-5 mx-auto" style={{ maxWidth: '640px', lineHeight: '1.6' }}>
               Your ultimate destination for the latest blockbusters, timeless classics, real-time seat locks, and seamless digital tickets.
             </p>
 
             {/* Call To Action Buttons */}
             <div className="d-flex flex-wrap justify-content-center align-items-center gap-3">
-              <Link
-                to="/"
+              <button
+                type="button"
+                onClick={handleExploreClick}
                 className="btn btn-danger btn-lg px-4 py-3 fw-bold rounded-pill shadow d-flex align-items-center gap-2 transition"
                 style={{
                   boxShadow: '0 8px 24px rgba(229, 9, 20, 0.45)',
@@ -94,7 +128,7 @@ export default function LandingPage() {
                 <Ticket size={18} />
                 <span>Explore Movies & Book</span>
                 <ArrowRight size={18} />
-              </Link>
+              </button>
 
               {!user ? (
                 <div className="d-flex gap-2">
@@ -159,62 +193,127 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* 2. NOW SHOWING SPOTLIGHT REEL */}
+      {/* 2. NOW SHOWING IN THEATRES SECTION */}
       <section className="py-5 bg-dark bg-opacity-50 border-top border-bottom border-secondary border-opacity-10">
         <div className="container py-3">
-          <div className="d-flex justify-content-between align-items-end mb-4">
+          <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-end gap-3 mb-4">
             <div>
               <div className="d-flex align-items-center gap-2 text-danger small fw-bold text-uppercase mb-1">
                 <TrendingUp size={16} />
-                <span>Now In Cinemas</span>
+                <span>Scheduled in Theatres Now</span>
               </div>
-              <h2 className="fw-bold text-light mb-0">Trending Blockbusters</h2>
+              <h2 className="fw-bold text-light mb-1">All Movies Currently Showing</h2>
+              <p className="text-secondary small mb-0">
+                Pick a movie to check available showtimes, select seats & reserve instantly.
+              </p>
             </div>
-            <Link to="/" className="btn btn-sm btn-outline-danger rounded-pill d-flex align-items-center gap-1">
-              <span>View All Movies</span>
-              <ChevronRight size={14} />
-            </Link>
+
+            {/* Quick Genre Pills */}
+            <div className="d-flex flex-wrap gap-2">
+              {genres.map((g) => (
+                <button
+                  key={g}
+                  type="button"
+                  onClick={() => setSelectedGenre(g)}
+                  className={`btn btn-sm rounded-pill px-3 py-1 transition ${
+                    selectedGenre === g
+                      ? 'btn-danger fw-bold'
+                      : 'btn-outline-secondary text-light'
+                  }`}
+                  style={{ fontSize: '12px' }}
+                >
+                  {g === 'ALL' ? 'All Genres' : g}
+                </button>
+              ))}
+            </div>
           </div>
 
-          <div className="row row-cols-2 row-cols-md-3 row-cols-lg-6 g-3">
-            {featuredMovies.slice(0, 6).map((movie) => (
-              <div key={movie._id} className="col">
-                <div
-                  className="card border-0 bg-transparent h-100 position-relative group overflow-hidden"
-                  style={{ borderRadius: '12px', transition: 'transform 0.3s ease' }}
-                >
-                  <div className="position-relative overflow-hidden rounded-3 shadow" style={{ aspectRatio: '2/3' }}>
-                    <img
-                      src={movie.posterUrl}
-                      alt={movie.title}
-                      className="w-100 h-100 object-fit-cover"
-                      loading="lazy"
-                    />
-                    {movie.avgRating && (
-                      <span className="position-absolute top-0 end-0 m-2 badge bg-dark bg-opacity-90 border border-warning text-warning d-flex align-items-center gap-1">
-                        <Star size={10} fill="#f59e0b" />
-                        <span>{movie.avgRating}</span>
+          {loading ? (
+            <div className="text-center py-5">
+              <div className="spinner-border text-danger" role="status" />
+              <p className="text-secondary small mt-2">Loading theater schedules...</p>
+            </div>
+          ) : displayedMovies.length === 0 ? (
+            <div className="text-center py-5 text-secondary">
+              No movies currently scheduled in this category.
+            </div>
+          ) : (
+            <div className="row row-cols-2 row-cols-sm-3 row-cols-md-4 row-cols-lg-6 g-3 g-md-4">
+              {displayedMovies.map((movie) => (
+                <div key={movie._id} className="col">
+                  <div
+                    className="card border-0 bg-transparent h-100 position-relative group overflow-hidden"
+                    style={{ borderRadius: '14px', transition: 'transform 0.25s ease' }}
+                  >
+                    {/* Poster with Click Gate */}
+                    <div
+                      className="position-relative overflow-hidden rounded-3 shadow cursor-pointer"
+                      style={{ aspectRatio: '2/3', background: '#121624' }}
+                      onClick={() => handleMovieClick(movie._id)}
+                    >
+                      <img
+                        src={movie.posterUrl}
+                        alt={movie.title}
+                        className="w-100 h-100 object-fit-cover"
+                        loading="lazy"
+                      />
+                      {/* Rating Badge */}
+                      {movie.avgRating ? (
+                        <span className="position-absolute top-0 end-0 m-2 badge bg-dark bg-opacity-90 border border-warning text-warning d-flex align-items-center gap-1 shadow-sm">
+                          <Star size={10} fill="#f59e0b" />
+                          <span>{movie.avgRating}</span>
+                        </span>
+                      ) : null}
+
+                      {/* Certificate Badge */}
+                      <span className="position-absolute bottom-0 start-0 m-2 badge bg-danger text-uppercase fw-bold" style={{ fontSize: '10px' }}>
+                        {movie.certificate || 'U/A'}
                       </span>
-                    )}
-                    <span className="position-absolute bottom-0 start-0 m-2 badge bg-danger text-uppercase" style={{ fontSize: '10px' }}>
-                      {movie.certificate}
-                    </span>
-                  </div>
-                  <div className="pt-2">
-                    <h6 className="text-light fw-bold text-truncate mb-1" title={movie.title} style={{ fontSize: '14px' }}>
-                      {movie.title}
-                    </h6>
-                    <div className="d-flex align-items-center justify-content-between text-secondary small">
-                      <span>{movie.genres?.[0] || 'Movie'}</span>
-                      <Link to={`/movies/${movie._id}`} className="text-danger fw-semibold text-decoration-none">
-                        Book &rarr;
-                      </Link>
+
+                      {/* Lock indicator if not logged in */}
+                      {!user && (
+                        <span
+                          className="position-absolute top-0 start-0 m-2 badge bg-dark bg-opacity-80 text-secondary border border-secondary border-opacity-25 d-flex align-items-center gap-1"
+                          style={{ fontSize: '10px' }}
+                          title="Sign in required to book"
+                        >
+                          <Lock size={10} />
+                          <span>Sign In</span>
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Movie Info */}
+                    <div className="pt-2 d-flex flex-column justify-content-between flex-grow-1">
+                      <div>
+                        <h6
+                          className="text-light fw-bold text-truncate mb-1 cursor-pointer"
+                          title={movie.title}
+                          style={{ fontSize: '14px' }}
+                          onClick={() => handleMovieClick(movie._id)}
+                        >
+                          {movie.title}
+                        </h6>
+                        <div className="text-secondary small text-truncate" style={{ fontSize: '11px' }}>
+                          {movie.languages?.slice(0, 2).join(', ') || 'Hindi'} • {movie.genres?.[0] || 'Movie'}
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => handleMovieClick(movie._id)}
+                        className="btn btn-sm btn-outline-danger w-100 mt-2 py-1 rounded-pill fw-semibold d-flex align-items-center justify-content-center gap-1.5"
+                        style={{ fontSize: '12px' }}
+                      >
+                        <Ticket size={13} />
+                        <span>Book Tickets</span>
+                      </button>
                     </div>
                   </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
       </section>
 
@@ -382,12 +481,13 @@ export default function LandingPage() {
                 Grab your favorite popcorn, reserve the best seats in the house, and experience movies like never before.
               </p>
               <div className="d-flex justify-content-center gap-3 flex-wrap">
-                <Link
-                  to="/"
+                <button
+                  type="button"
+                  onClick={handleExploreClick}
                   className="btn btn-light btn-lg px-5 py-3 fw-bold rounded-pill text-danger shadow"
                 >
                   Browse Now Showing
-                </Link>
+                </button>
                 {!user && (
                   <Link
                     to="/register"
