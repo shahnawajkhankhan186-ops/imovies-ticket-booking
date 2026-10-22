@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   Film,
@@ -13,8 +13,11 @@ import {
   Clock,
   Heart,
   ChevronRight,
+  ChevronLeft,
   TrendingUp,
   Lock,
+  Calendar,
+  Users,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../../lib/api';
@@ -25,6 +28,8 @@ export default function LandingPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [featuredMovies, setFeaturedMovies] = useState([]);
+  const [currentHeroIndex, setCurrentHeroIndex] = useState(0);
+  const [isPaused, setIsPaused] = useState(false);
   const [selectedGenre, setSelectedGenre] = useState('ALL');
   const [trailerMovie, setTrailerMovie] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -42,6 +47,27 @@ export default function LandingPage() {
     }
     loadFeatured();
   }, []);
+
+  // Auto-slide hero banner every 5 seconds (5000ms)
+  useEffect(() => {
+    if (featuredMovies.length <= 1 || isPaused) return;
+
+    const interval = setInterval(() => {
+      setCurrentHeroIndex((prev) => (prev + 1) % featuredMovies.length);
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [featuredMovies.length, isPaused, currentHeroIndex]);
+
+  const handlePrevHero = () => {
+    setCurrentHeroIndex((prev) =>
+      prev === 0 ? featuredMovies.length - 1 : prev - 1
+    );
+  };
+
+  const handleNextHero = () => {
+    setCurrentHeroIndex((prev) => (prev + 1) % featuredMovies.length);
+  };
 
   const handleMovieClick = (movieId) => {
     if (!user) {
@@ -72,121 +98,396 @@ export default function LandingPage() {
     ? featuredMovies
     : featuredMovies.filter((m) => m.genres?.includes(selectedGenre));
 
-  const heroBg = featuredMovies[0]?.bannerUrl || featuredMovies[0]?.posterUrl || 'https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=1600&auto=format&fit=crop&q=80';
+  const currentMovie = featuredMovies[currentHeroIndex] || featuredMovies[0];
+  const heroBg = currentMovie?.bannerUrl || currentMovie?.posterUrl || 'https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=1600&auto=format&fit=crop&q=80';
+
+  const formatRuntime = (mins) => {
+    if (!mins) return '2h 15m';
+    const h = Math.floor(mins / 60);
+    const m = mins % 60;
+    return `${h}h ${m}m`;
+  };
 
   return (
     <div className="landing-page overflow-hidden">
-      {/* 1. HERO SECTION */}
+      {/* Dynamic Keyframe style for 5s progress bar */}
+      <style>{`
+        @keyframes heroTimerFill {
+          0% { width: 0%; }
+          100% { width: 100%; }
+        }
+        .hero-timer-active {
+          animation: heroTimerFill 5s linear forwards;
+        }
+        .hero-timer-paused {
+          animation-play-state: paused !important;
+        }
+      `}</style>
+
+      {/* 1. AUTO-SLIDING HERO SECTION (CHANGES EVERY 5 SECONDS WITH FULL DETAILS) */}
       <section
-        className="position-relative d-flex align-items-center justify-content-center text-center text-white"
+        className="position-relative text-white hero-carousel-wrapper"
+        onMouseEnter={() => setIsPaused(true)}
+        onMouseLeave={() => setIsPaused(false)}
         style={{
           minHeight: '88vh',
-          background: `radial-gradient(circle at center, rgba(15, 16, 22, 0.4) 0%, rgba(10, 12, 19, 0.92) 80%, rgba(10, 12, 19, 1) 100%), url(${heroBg}) center/cover no-repeat`,
+          background: `
+            linear-gradient(90deg, rgba(10, 12, 19, 0.96) 0%, rgba(10, 12, 19, 0.85) 45%, rgba(10, 12, 19, 0.7) 70%, rgba(10, 12, 19, 0.95) 100%),
+            linear-gradient(0deg, #0a0c13 0%, rgba(10, 12, 19, 0.2) 50%, rgba(10, 12, 19, 0.8) 100%),
+            url(${heroBg}) center/cover no-repeat
+          `,
+          transition: 'background-image 0.7s ease-in-out',
         }}
       >
+        {/* Ambient Top Glow */}
         <div
           className="position-absolute top-0 start-0 w-100 h-100"
           style={{
-            background: 'radial-gradient(ellipse 80% 50% at 50% -20%, rgba(229, 9, 20, 0.25), transparent)',
+            background: 'radial-gradient(ellipse 75% 45% at 50% -10%, rgba(229, 9, 20, 0.22), transparent)',
             pointerEvents: 'none',
           }}
         />
 
-        <div className="container position-relative py-5">
-          <div className="mx-auto" style={{ maxWidth: '840px' }}>
-            {/* Pill Badge */}
-            <div className="d-inline-flex align-items-center gap-2 px-3 py-1 rounded-pill mb-4 border border-danger border-opacity-50"
-              style={{ background: 'rgba(229, 9, 20, 0.12)', backdropFilter: 'blur(8px)' }}
-            >
-              <Sparkles size={15} className="text-danger" />
-              <span className="text-danger text-uppercase fw-bold" style={{ fontSize: '12px', letterSpacing: '1.5px' }}>
-                The Next-Gen Cinema Booking Platform
-              </span>
+        <div className="container position-relative py-5 d-flex flex-column justify-content-center" style={{ minHeight: '88vh' }}>
+          {currentMovie ? (
+            <div className="row align-items-center g-4 my-auto py-4">
+              {/* Left Column: Full Movie Details */}
+              <div className="col-12 col-lg-7 col-xl-8 text-start">
+                {/* Cinema Status & Format Badges */}
+                <div className="d-flex flex-wrap align-items-center gap-2 mb-3">
+                  <div
+                    className="d-inline-flex align-items-center gap-1.5 px-3 py-1 rounded-pill border border-danger border-opacity-50"
+                    style={{ background: 'rgba(229, 9, 20, 0.16)', backdropFilter: 'blur(8px)' }}
+                  >
+                    <span className="spinner-grow spinner-grow-sm text-danger" style={{ width: '8px', height: '8px' }} />
+                    <span className="text-danger text-uppercase fw-bold" style={{ fontSize: '11px', letterSpacing: '1.2px' }}>
+                      Now Showing in Theatres
+                    </span>
+                  </div>
+
+                  <span className="badge bg-danger text-uppercase fw-bold px-2.5 py-1" style={{ fontSize: '11px' }}>
+                    {currentMovie.certificate || 'U/A'}
+                  </span>
+
+                  <span className="badge bg-dark bg-opacity-75 border border-secondary text-light px-2.5 py-1" style={{ fontSize: '11px' }}>
+                    IMAX 3D • 2D • 4DX
+                  </span>
+                </div>
+
+                {/* Movie Title */}
+                <h1
+                  className="display-4 fw-extrabold text-white mb-2"
+                  style={{
+                    letterSpacing: '-1px',
+                    lineHeight: '1.15',
+                    textShadow: '0 4px 24px rgba(0,0,0,0.85)',
+                  }}
+                >
+                  {currentMovie.title}
+                </h1>
+
+                {/* Meta stats bar (Rating, Duration, Year, Language) */}
+                <div className="d-flex flex-wrap align-items-center gap-3 my-3 text-secondary" style={{ fontSize: '14px' }}>
+                  {/* Rating */}
+                  <div className="d-flex align-items-center gap-1 text-warning fw-bold">
+                    <Star size={16} fill="#f59e0b" />
+                    <span className="text-white">{currentMovie.avgRating || '4.8'}</span>
+                    <span className="text-secondary small">({currentMovie.reviewCount || '1.2k'}+ ratings)</span>
+                  </div>
+
+                  <span className="text-secondary">•</span>
+
+                  {/* Runtime */}
+                  <div className="d-flex align-items-center gap-1 text-light">
+                    <Clock size={15} className="text-danger" />
+                    <span>{formatRuntime(currentMovie.durationMinutes)}</span>
+                  </div>
+
+                  <span className="text-secondary">•</span>
+
+                  {/* Release Year */}
+                  <div className="d-flex align-items-center gap-1 text-light">
+                    <Calendar size={15} className="text-secondary" />
+                    <span>{currentMovie.releaseDate ? new Date(currentMovie.releaseDate).getFullYear() : '2026'}</span>
+                  </div>
+
+                  <span className="text-secondary">•</span>
+
+                  {/* Languages */}
+                  <div className="text-light fw-medium">
+                    {currentMovie.languages?.join(', ') || 'Hindi, English'}
+                  </div>
+                </div>
+
+                {/* Genre Badges */}
+                <div className="d-flex flex-wrap gap-1.5 mb-3">
+                  {currentMovie.genres?.map((genre) => (
+                    <span
+                      key={genre}
+                      className="badge rounded-pill text-white border border-secondary border-opacity-30"
+                      style={{ background: 'rgba(255, 255, 255, 0.08)', fontSize: '12px', padding: '6px 12px' }}
+                    >
+                      {genre}
+                    </span>
+                  ))}
+                </div>
+
+                {/* Storyline / Synopsis */}
+                <p
+                  className="lead text-light opacity-90 mb-4"
+                  style={{
+                    maxWidth: '680px',
+                    fontSize: '15px',
+                    lineHeight: '1.65',
+                    display: '-webkit-box',
+                    WebkitLineClamp: 3,
+                    WebkitBoxOrient: 'vertical',
+                    overflow: 'hidden',
+                  }}
+                >
+                  {currentMovie.synopsis ||
+                    'Immerse yourself in cinematic greatness with Dolby Atmos spatial sound, crystal-clear 4K projection, and instant live seat locks across premier theatres.'}
+                </p>
+
+                {/* Cast & Director if present */}
+                {(currentMovie.cast?.length > 0 || currentMovie.director) && (
+                  <div className="mb-4 small text-secondary">
+                    {currentMovie.director && (
+                      <span className="me-3">
+                        <strong className="text-light">Director:</strong> {currentMovie.director}
+                      </span>
+                    )}
+                    {currentMovie.cast?.length > 0 && (
+                      <span>
+                        <strong className="text-light">Starring:</strong> {currentMovie.cast.slice(0, 3).join(', ')}
+                      </span>
+                    )}
+                  </div>
+                )}
+
+                {/* Action Buttons */}
+                <div className="d-flex flex-wrap align-items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => handleMovieClick(currentMovie._id)}
+                    className="btn btn-danger btn-lg px-4 py-2.5 fw-bold rounded-pill shadow-lg d-flex align-items-center gap-2 transition"
+                    style={{
+                      boxShadow: '0 8px 25px rgba(229, 9, 20, 0.55)',
+                      fontSize: '15px',
+                    }}
+                  >
+                    <Ticket size={18} />
+                    <span>Book Tickets</span>
+                    <ArrowRight size={17} />
+                  </button>
+
+                  {currentMovie.trailerUrl ? (
+                    <button
+                      type="button"
+                      onClick={() => setTrailerMovie(currentMovie)}
+                      className="btn btn-outline-light btn-lg px-4 py-2.5 fw-bold rounded-pill d-flex align-items-center gap-2 transition"
+                      style={{ background: 'rgba(255, 255, 255, 0.08)', backdropFilter: 'blur(8px)', fontSize: '15px' }}
+                    >
+                      <Play size={17} fill="currentColor" />
+                      <span>Watch Trailer</span>
+                    </button>
+                  ) : null}
+
+                  <button
+                    type="button"
+                    onClick={handleExploreClick}
+                    className="btn btn-outline-secondary text-light btn-lg px-3 py-2.5 fw-medium rounded-pill d-flex align-items-center gap-1.5 transition"
+                    style={{ fontSize: '14px' }}
+                  >
+                    <Film size={16} />
+                    <span>All Movies</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Right Column: 3D Poster Showcase (Desktop) */}
+              <div className="col-lg-5 col-xl-4 d-none d-lg-flex justify-content-center">
+                <div
+                  className="position-relative cursor-pointer group"
+                  onClick={() => handleMovieClick(currentMovie._id)}
+                  style={{
+                    width: '280px',
+                    aspectRatio: '2/3',
+                    borderRadius: '20px',
+                    boxShadow: '0 20px 50px rgba(0, 0, 0, 0.8), 0 0 40px rgba(229, 9, 20, 0.3)',
+                    overflow: 'hidden',
+                    border: '2px solid rgba(255, 255, 255, 0.1)',
+                    transition: 'transform 0.4s ease, box-shadow 0.4s ease',
+                  }}
+                >
+                  <img
+                    src={currentMovie.posterUrl}
+                    alt={currentMovie.title}
+                    className="w-100 h-100 object-fit-cover"
+                  />
+
+                  {/* Rating Ribbon */}
+                  {currentMovie.avgRating && (
+                    <div className="position-absolute top-0 end-0 m-3 badge bg-dark bg-opacity-90 border border-warning text-warning d-flex align-items-center gap-1 px-2.5 py-1.5 shadow">
+                      <Star size={13} fill="#f59e0b" />
+                      <span className="fw-bold">{currentMovie.avgRating}</span>
+                    </div>
+                  )}
+
+                  {/* Play Trailer Floating Overlay */}
+                  {currentMovie.trailerUrl && (
+                    <div
+                      className="position-absolute bottom-0 start-0 w-100 p-3 text-center"
+                      style={{
+                        background: 'linear-gradient(to top, rgba(10, 12, 19, 0.95), transparent)',
+                      }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setTrailerMovie(currentMovie);
+                      }}
+                    >
+                      <button
+                        type="button"
+                        className="btn btn-sm btn-danger rounded-pill px-3 py-1.5 d-inline-flex align-items-center gap-2 shadow"
+                      >
+                        <Play size={13} fill="currentColor" />
+                        <span>Preview Trailer</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
+          ) : (
+            <div className="text-center py-5">
+              <h2 className="display-4 fw-bold">Welcome to iMovies</h2>
+              <p className="text-secondary lead">Loading premier blockbusters...</p>
+            </div>
+          )}
 
-            {/* Main Headline */}
-            <h1 className="display-3 fw-extrabold text-white mb-3" style={{ letterSpacing: '-1px' }}>
-              Welcome to <span className="text-danger" style={{ textShadow: '0 0 35px rgba(229, 9, 20, 0.6)' }}>iMovies</span>
-            </h1>
-
-            {/* Subtitle */}
-            <p className="lead text-secondary fs-5 mb-5 mx-auto" style={{ maxWidth: '640px', lineHeight: '1.6' }}>
-              Your ultimate destination for the latest blockbusters, timeless classics, real-time seat locks, and seamless digital tickets.
-            </p>
-
-            {/* Call To Action Buttons */}
-            <div className="d-flex flex-wrap justify-content-center align-items-center gap-3">
+          {/* Carousel Arrows (Prev & Next) */}
+          {featuredMovies.length > 1 && (
+            <>
               <button
                 type="button"
-                onClick={handleExploreClick}
-                className="btn btn-danger btn-lg px-4 py-3 fw-bold rounded-pill shadow d-flex align-items-center gap-2 transition"
+                onClick={handlePrevHero}
+                aria-label="Previous Movie"
+                className="btn position-absolute top-50 start-0 translate-middle-y ms-2 ms-md-4 rounded-circle d-flex align-items-center justify-content-center text-white border-0 shadow"
                 style={{
-                  boxShadow: '0 8px 24px rgba(229, 9, 20, 0.45)',
-                  fontSize: '16px',
+                  width: '46px',
+                  height: '46px',
+                  background: 'rgba(20, 22, 32, 0.75)',
+                  backdropFilter: 'blur(10px)',
+                  zIndex: 10,
+                  transition: 'all 0.2s ease',
                 }}
               >
-                <Ticket size={18} />
-                <span>Explore Movies & Book</span>
-                <ArrowRight size={18} />
+                <ChevronLeft size={24} />
               </button>
 
-              {!user ? (
-                <div className="d-flex gap-2">
-                  <Link
-                    to="/login"
-                    className="btn btn-outline-light btn-lg px-4 py-3 fw-bold rounded-pill transition"
-                    style={{ background: 'rgba(255, 255, 255, 0.05)', backdropFilter: 'blur(10px)', fontSize: '16px' }}
-                  >
-                    Sign In
-                  </Link>
-                  <Link
-                    to="/register"
-                    className="btn btn-outline-danger btn-lg px-4 py-3 fw-bold rounded-pill transition"
-                    style={{ background: 'rgba(229, 9, 20, 0.08)', backdropFilter: 'blur(10px)', fontSize: '16px' }}
-                  >
-                    Sign Up
-                  </Link>
-                </div>
-              ) : (
-                <Link
-                  to="/favorites"
-                  className="btn btn-outline-danger btn-lg px-4 py-3 fw-bold rounded-pill d-flex align-items-center gap-2"
-                  style={{ background: 'rgba(229, 9, 20, 0.08)', backdropFilter: 'blur(10px)', fontSize: '16px' }}
-                >
-                  <Heart size={18} fill="#e50914" />
-                  <span>My Watchlist</span>
-                </Link>
-              )}
-            </div>
+              <button
+                type="button"
+                onClick={handleNextHero}
+                aria-label="Next Movie"
+                className="btn position-absolute top-50 end-0 translate-middle-y me-2 me-md-4 rounded-circle d-flex align-items-center justify-content-center text-white border-0 shadow"
+                style={{
+                  width: '46px',
+                  height: '46px',
+                  background: 'rgba(20, 22, 32, 0.75)',
+                  backdropFilter: 'blur(10px)',
+                  zIndex: 10,
+                  transition: 'all 0.2s ease',
+                }}
+              >
+                <ChevronRight size={24} />
+              </button>
+            </>
+          )}
 
-            {/* Live Stats Strip */}
-            <div
-              className="row row-cols-2 row-cols-md-4 g-3 mt-5 pt-4 text-center border-top border-secondary border-opacity-25"
-              style={{ maxWidth: '780px', margin: '0 auto' }}
-            >
-              <div className="col">
-                <div className="fs-3 fw-extrabold text-white">50+</div>
-                <div className="small text-secondary text-uppercase" style={{ fontSize: '11px', letterSpacing: '0.8px' }}>
-                  Blockbuster Releases
-                </div>
+          {/* Carousel Progress Indicators (Shows all listed movies, auto cycles every 5s) */}
+          {featuredMovies.length > 1 && (
+            <div className="d-flex flex-column flex-md-row align-items-center justify-content-between gap-3 pt-3 border-top border-secondary border-opacity-25 mt-4">
+              {/* Slide Counter & Pause Status */}
+              <div className="d-flex align-items-center gap-2 text-secondary small" style={{ fontSize: '12px' }}>
+                <span className="text-danger fw-bold fs-6">
+                  {String(currentHeroIndex + 1).padStart(2, '0')}
+                </span>
+                <span>/</span>
+                <span>{String(featuredMovies.length).padStart(2, '0')}</span>
+                {isPaused && (
+                  <span className="badge bg-secondary bg-opacity-25 text-secondary ms-2" style={{ fontSize: '10px' }}>
+                    Auto-slide paused
+                  </span>
+                )}
               </div>
-              <div className="col">
-                <div className="fs-3 fw-extrabold text-danger">100%</div>
-                <div className="small text-secondary text-uppercase" style={{ fontSize: '11px', letterSpacing: '0.8px' }}>
-                  Live Seat Lock
-                </div>
+
+              {/* Progress Trackers for Listed Movies */}
+              <div className="d-flex align-items-center gap-2 overflow-x-auto pb-1" style={{ maxWidth: '650px' }}>
+                {featuredMovies.slice(0, 10).map((movie, idx) => {
+                  const isActive = idx === currentHeroIndex;
+                  return (
+                    <button
+                      key={movie._id}
+                      type="button"
+                      onClick={() => setCurrentHeroIndex(idx)}
+                      title={movie.title}
+                      className="btn p-0 border-0 position-relative rounded-pill overflow-hidden"
+                      style={{
+                        width: isActive ? '60px' : '22px',
+                        height: '6px',
+                        background: isActive ? 'rgba(255, 255, 255, 0.2)' : 'rgba(255, 255, 255, 0.15)',
+                        transition: 'width 0.3s ease, background 0.3s ease',
+                      }}
+                    >
+                      {isActive && (
+                        <div
+                          key={`timer-${currentHeroIndex}`}
+                          className={`h-100 rounded-pill bg-danger ${
+                            isPaused ? 'hero-timer-paused' : 'hero-timer-active'
+                          }`}
+                          style={{ width: isPaused ? '50%' : '0%' }}
+                        />
+                      )}
+                    </button>
+                  );
+                })}
               </div>
-              <div className="col">
-                <div className="fs-3 fw-extrabold text-white">4.9 ★</div>
-                <div className="small text-secondary text-uppercase" style={{ fontSize: '11px', letterSpacing: '0.8px' }}>
-                  User Rating
-                </div>
+
+              {/* Quick Prompt */}
+              <div className="text-secondary small d-none d-lg-block" style={{ fontSize: '11px' }}>
+                Switches every 5 seconds • Hover to pause
               </div>
-              <div className="col">
-                <div className="fs-3 fw-extrabold text-success">0 sec</div>
-                <div className="small text-secondary text-uppercase" style={{ fontSize: '11px', letterSpacing: '0.8px' }}>
-                  QR Gate Check-In
-                </div>
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* 2. STATS STRIP */}
+      <section className="bg-dark bg-opacity-75 py-3 border-bottom border-secondary border-opacity-20">
+        <div className="container">
+          <div className="row row-cols-2 row-cols-md-4 g-3 text-center">
+            <div className="col">
+              <div className="fs-4 fw-extrabold text-white">50+</div>
+              <div className="small text-secondary text-uppercase" style={{ fontSize: '11px', letterSpacing: '0.8px' }}>
+                Blockbuster Releases
+              </div>
+            </div>
+            <div className="col">
+              <div className="fs-4 fw-extrabold text-danger">100%</div>
+              <div className="small text-secondary text-uppercase" style={{ fontSize: '11px', letterSpacing: '0.8px' }}>
+                Live Seat Lock
+              </div>
+            </div>
+            <div className="col">
+              <div className="fs-4 fw-extrabold text-white">4.9 ★</div>
+              <div className="small text-secondary text-uppercase" style={{ fontSize: '11px', letterSpacing: '0.8px' }}>
+                User Rating
+              </div>
+            </div>
+            <div className="col">
+              <div className="fs-4 fw-extrabold text-success">0 sec</div>
+              <div className="small text-secondary text-uppercase" style={{ fontSize: '11px', letterSpacing: '0.8px' }}>
+                QR Gate Check-In
               </div>
             </div>
           </div>
