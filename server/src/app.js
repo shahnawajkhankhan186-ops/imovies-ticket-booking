@@ -10,6 +10,7 @@ import publicRoutes from './routes/public.routes.js';
 import userRoutes from './routes/user.routes.js';
 import adminRoutes from './routes/admin.routes.js';
 import webhookRoutes from './routes/webhook.routes.js';
+import favoriteRoutes from './routes/favorite.routes.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import { MESSAGES } from './constants/messages.js';
 
@@ -74,6 +75,7 @@ app.use('/api/public', publicRoutes);
 app.use('/api/user', userRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/webhooks', webhookRoutes);
+app.use('/api/favorite', favoriteRoutes);
 
 // Catch-all 404 handler for unmatched routes
 app.use((req, res) => {

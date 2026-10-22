@@ -34,6 +34,8 @@ import {
   getAdminAuditLogs,
   getAdminSettings,
   updateAdminSettings,
+  getAdminReviews,
+  deleteAdminReview,
 } from '../controllers/admin.controller.js';
 import { requireAuth } from '../middleware/auth.js';
 import { requireRole } from '../middleware/role.js';
@@ -102,5 +104,9 @@ router.get('/audit-logs', getAdminAuditLogs);
 // Settings
 router.get('/settings', getAdminSettings);
 router.put('/settings', updateAdminSettings);
+
+// Reviews Moderation
+router.get('/reviews', getAdminReviews);
+router.delete('/reviews/:id', deleteAdminReview);
 
 export default router;
