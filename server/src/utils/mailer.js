@@ -153,3 +153,39 @@ export async function sendPasswordResetEmail({ to, otp }) {
     return null;
   }
 }
+
+/**
+ * Sends a 6-digit Email Verification OTP to new registration users
+ */
+export async function sendEmailVerificationOTP({ to, otp }) {
+  try {
+    const t = await getTransporter();
+    const mailOptions = {
+      from: process.env.SMTP_FROM || '"IMovies Verification" <verify@imovies.com>',
+      to,
+      subject: `IMovies — Your Registration Verification Code (${otp})`,
+      html: `
+        <div style="font-family: Arial, sans-serif; background: #0f1016; color: #ffffff; padding: 24px; border-radius: 8px; max-width: 500px; margin: auto;">
+          <h2 style="color: #e50914; margin-top: 0;">Welcome to IMovies!</h2>
+          <p>Thank you for creating an account. Please verify your email address using the verification code below:</p>
+          <div style="background: #1b1e2e; border: 1px dashed #e50914; border-radius: 8px; padding: 18px; text-align: center; margin: 20px 0;">
+            <span style="font-size: 34px; font-weight: bold; letter-spacing: 6px; color: #ffffff;">${otp}</span>
+          </div>
+          <p style="color: #a0aec0; font-size: 13px;">This OTP is valid for 10 minutes. Do not share this code with anyone.</p>
+          <p style="color: #718096; font-size: 12px; margin-top: 24px; border-top: 1px solid #242c44; pt-2;">If you did not attempt to sign up for IMovies, you can safely ignore this email.</p>
+        </div>
+      `,
+    };
+
+    if (process.env.NODE_ENV === 'test') {
+      return { messageId: 'test_verify_otp' };
+    }
+
+    const info = await t.sendMail(mailOptions);
+    console.log(`[MAILER] Registration verification OTP sent to ${to}`);
+    return info;
+  } catch (error) {
+    console.warn('[MAILER WARN] Failed to send registration OTP email:', error.message);
+    return null;
+  }
+}

@@ -35,10 +35,10 @@ export default function LoginPage() {
       if (user.role === 'ADMIN' && (from === '/' || from === '/login')) {
         navigate('/admin/dashboard', { replace: true });
       } else {
-        navigate(from === '/login' ? '/' : from, { replace: true });
+        navigate(from === '/login' || from === '/' ? '/movies' : from, { replace: true });
       }
     } catch (err) {
-      setError(err.message || 'Login failed. Please check your credentials.');
+      setError(err.response?.data?.error || err.message || 'Login failed. Please check your credentials.');
     } finally {
       setLoading(false);
     }

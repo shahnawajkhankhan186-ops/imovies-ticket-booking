@@ -3,10 +3,11 @@ import crypto from 'crypto';
 import { z } from 'zod';
 import { OAuth2Client } from 'google-auth-library';
 import { User } from '../models/User.js';
+import { EmailOtp } from '../models/EmailOtp.js';
 import { env } from '../config/env.js';
 import { MESSAGES, MACHINE_CODES } from '../constants/messages.js';
 import { ROLES, USER_STATUS } from '../constants/enums.js';
-import { sendPasswordResetEmail } from '../utils/mailer.js';
+import { sendPasswordResetEmail, sendEmailVerificationOTP } from '../utils/mailer.js';
 import { sendPasswordResetSMS } from '../utils/sms.js';
 
 const googleClient = new OAuth2Client(env.GOOGLE_CLIENT_ID);
@@ -32,6 +33,15 @@ export const registerSchema = z.object({
   phone: z.string().optional(),
 });
 
+export const sendOtpSchema = z.object({
+  email: z.string().email('Invalid email address').toLowerCase().trim(),
+});
+
+export const verifyOtpSchema = z.object({
+  email: z.string().email('Invalid email address').toLowerCase().trim(),
+  otp: z.string().min(6, 'OTP must be 6 digits').max(6, 'OTP must be 6 digits'),
+});
+
 export const loginSchema = z.object({
   email: z.string().email('Invalid email address').toLowerCase().trim(),
   password: z.string().min(1, 'Password is required'),
@@ -47,12 +57,91 @@ export const resetPasswordSchema = z.object({
   newPassword: z.string().min(6, 'New password must be at least 6 characters'),
 });
 
+export async function sendRegistrationOtp(req, res, next) {
+  try {
+    const { email } = req.body;
+    const cleanEmail = email.toLowerCase().trim();
+
+    // Check if an existing verified user already exists
+    const existing = await User.findOne({ email: cleanEmail });
+    if (existing && existing.isEmailVerified !== false) {
+      return res.status(409).json({
+        error: 'An account with this email address already exists. Please sign in.',
+        code: 'EMAIL_ALREADY_EXISTS',
+      });
+    }
+
+    // Generate 6-digit verification code
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const otpHash = crypto.createHash('sha256').update(otp).digest('hex');
+
+    // Store in EmailOtp collection with 10-minute expiry
+    await EmailOtp.findOneAndUpdate(
+      { email: cleanEmail },
+      {
+        otpHash,
+        expiresAt: new Date(Date.now() + 10 * 60 * 1000),
+        verified: false,
+      },
+      { upsert: true, new: true }
+    );
+
+    // Send real email via verified Gmail SMTP
+    await sendEmailVerificationOTP({ to: cleanEmail, otp });
+
+    console.log(`\n\x1b[35m[REGISTRATION OTP DISPATCHED]\x1b[0m`);
+    console.log(`To: ${cleanEmail}`);
+    console.log(`Code: \x1b[36m${otp}\x1b[0m\n`);
+
+    return res.status(200).json({
+      message: 'A 6-digit verification OTP has been sent to your Gmail.',
+      email: cleanEmail,
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function verifyRegistrationOtp(req, res, next) {
+  try {
+    const { email, otp } = req.body;
+    const cleanEmail = email.toLowerCase().trim();
+    const cleanOtp = (otp || '').trim();
+
+    const otpHash = crypto.createHash('sha256').update(cleanOtp).digest('hex');
+    const record = await EmailOtp.findOne({
+      email: cleanEmail,
+      otpHash,
+      expiresAt: { $gt: new Date() },
+    });
+
+    if (!record) {
+      return res.status(400).json({
+        error: 'Invalid or expired OTP code. Please check your email or request a new code.',
+        code: 'INVALID_OTP',
+      });
+    }
+
+    record.verified = true;
+    await record.save();
+
+    return res.status(200).json({
+      message: 'Email address verified successfully!',
+      verified: true,
+      email: cleanEmail,
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
 export async function register(req, res, next) {
   try {
     const { name, email, password, phone } = req.body;
+    const cleanEmail = email.toLowerCase().trim();
 
-    const existingUser = await User.findOne({ email });
-    if (existingUser) {
+    const existingUser = await User.findOne({ email: cleanEmail });
+    if (existingUser && existingUser.isEmailVerified !== false) {
       return res.status(409).json({
         error: MESSAGES.EMAIL_ALREADY_EXISTS,
         code: 'EMAIL_ALREADY_EXISTS',
@@ -61,7 +150,7 @@ export async function register(req, res, next) {
 
     if (phone && phone.trim() !== '') {
       const existingPhone = await User.findOne({ phone: phone.trim() });
-      if (existingPhone) {
+      if (existingPhone && (!existingUser || existingPhone._id.toString() !== existingUser._id.toString())) {
         return res.status(409).json({
           error: MESSAGES.PHONE_ALREADY_EXISTS,
           code: 'PHONE_ALREADY_EXISTS',
@@ -69,23 +158,48 @@ export async function register(req, res, next) {
       }
     }
 
+    // Require verified OTP for new local registrations
+    const otpRecord = await EmailOtp.findOne({ email: cleanEmail });
+    if (!otpRecord || !otpRecord.verified) {
+      return res.status(400).json({
+        error: 'Please verify your email address with the OTP before completing registration.',
+        code: 'EMAIL_NOT_VERIFIED',
+      });
+    }
+
     const passwordHash = await User.hashPassword(password);
-    const user = await User.create({
-      name: name.trim(),
-      email,
-      phone: phone && phone.trim() !== '' ? phone.trim() : undefined,
-      passwordHash,
-      role: ROLES.USER,
-      status: USER_STATUS.ACTIVE,
-    });
+    let user;
+
+    if (existingUser) {
+      existingUser.name = name.trim();
+      existingUser.passwordHash = passwordHash;
+      existingUser.phone = phone && phone.trim() !== '' ? phone.trim() : undefined;
+      existingUser.isEmailVerified = true;
+      existingUser.status = USER_STATUS.ACTIVE;
+      await existingUser.save();
+      user = existingUser;
+    } else {
+      user = await User.create({
+        name: name.trim(),
+        email: cleanEmail,
+        phone: phone && phone.trim() !== '' ? phone.trim() : undefined,
+        passwordHash,
+        role: ROLES.USER,
+        status: USER_STATUS.ACTIVE,
+        isEmailVerified: true,
+      });
+    }
+
+    // Remove used OTP record
+    await EmailOtp.deleteOne({ email: cleanEmail });
 
     const token = generateToken(user._id);
     res.cookie('token', token, cookieOptions);
 
     return res.status(201).json({
-      message: 'Registration successful.',
+      message: 'Registration successful. Welcome to IMovies!',
       user: user.toJSON(),
-      token, // Also return token in JSON for client flexibility
+      token,
     });
   } catch (error) {
     next(error);
@@ -95,8 +209,9 @@ export async function register(req, res, next) {
 export async function login(req, res, next) {
   try {
     const { email, password } = req.body;
+    const cleanEmail = email.toLowerCase().trim();
 
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ email: cleanEmail });
     if (!user) {
       return res.status(401).json({
         error: MESSAGES.INVALID_CREDENTIALS,
@@ -116,6 +231,14 @@ export async function login(req, res, next) {
       return res.status(403).json({
         error: MESSAGES.ACCOUNT_SUSPENDED,
         code: MACHINE_CODES.ACCOUNT_SUSPENDED,
+      });
+    }
+
+    if (user.authProvider === 'LOCAL' && user.isEmailVerified === false) {
+      return res.status(403).json({
+        error: 'Please verify your email address with the OTP before logging in.',
+        code: 'EMAIL_NOT_VERIFIED',
+        email: user.email,
       });
     }
 

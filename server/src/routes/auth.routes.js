@@ -1,6 +1,8 @@
 import { Router } from 'express';
 import {
   register,
+  sendRegistrationOtp,
+  verifyRegistrationOtp,
   login,
   logout,
   googleLogin,
@@ -8,6 +10,8 @@ import {
   forgotPassword,
   resetPassword,
   registerSchema,
+  sendOtpSchema,
+  verifyOtpSchema,
   loginSchema,
   forgotPasswordSchema,
   resetPasswordSchema,
@@ -18,6 +22,8 @@ import { authLimiter } from '../middleware/rateLimit.js';
 
 const router = Router();
 
+router.post('/send-otp', authLimiter, validate(sendOtpSchema), sendRegistrationOtp);
+router.post('/verify-otp', authLimiter, validate(verifyOtpSchema), verifyRegistrationOtp);
 router.post('/register', authLimiter, validate(registerSchema), register);
 router.post('/login', authLimiter, validate(loginSchema), login);
 router.post('/google', googleLogin);

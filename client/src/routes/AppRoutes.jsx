@@ -45,18 +45,84 @@ import AdminRoute from './AdminRoute';
 export default function AppRoutes() {
   return (
     <Routes>
-      {/* Public Routes */}
-      <Route path="/" element={<HomePage />} />
+      {/* Public Landing Entrance */}
+      <Route path="/" element={<LandingPage />} />
       <Route path="/landing" element={<LandingPage />} />
       <Route path="/pages/landing/Landing" element={<LandingPage />} />
-      <Route path="/movies/:id" element={<MovieDetailPage />} />
-      <Route path="/movie/:id" element={<MovieDetailPage />} />
-      <Route path="/movies/:id/shows" element={<ShowSelectionPage />} />
-      <Route path="/movie/:id/shows" element={<ShowSelectionPage />} />
-      <Route path="/shows/:showId/seats" element={<SeatSelectionPage />} />
-      <Route path="/shows/:id/seats" element={<SeatSelectionPage />} />
-      <Route path="/book/:showId" element={<SeatSelectionPage />} />
-      <Route path="/book/:id" element={<SeatSelectionPage />} />
+
+      {/* Inside Website Pages - Protected: Requires Sign-in */}
+      <Route
+        path="/movies"
+        element={
+          <ProtectedRoute>
+            <HomePage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/movies/:id"
+        element={
+          <ProtectedRoute>
+            <MovieDetailPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/movie/:id"
+        element={
+          <ProtectedRoute>
+            <MovieDetailPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/movies/:id/shows"
+        element={
+          <ProtectedRoute>
+            <ShowSelectionPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/movie/:id/shows"
+        element={
+          <ProtectedRoute>
+            <ShowSelectionPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/shows/:showId/seats"
+        element={
+          <ProtectedRoute>
+            <SeatSelectionPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/shows/:id/seats"
+        element={
+          <ProtectedRoute>
+            <SeatSelectionPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/book/:showId"
+        element={
+          <ProtectedRoute>
+            <SeatSelectionPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/book/:id"
+        element={
+          <ProtectedRoute>
+            <SeatSelectionPage />
+          </ProtectedRoute>
+        }
+      />
 
       {/* Auth Routes */}
       <Route path="/login" element={<LoginPage />} />
