@@ -9,6 +9,7 @@ import {
   getUserBookings,
   getBookingById,
   cancelBooking,
+  rescheduleBooking,
   getProfile,
   updateProfile,
   updatePassword,
@@ -40,6 +41,7 @@ router.post('/bookings/:id/apply-coupon', applyCouponToBooking);
 router.get('/bookings', getUserBookings);
 router.get('/bookings/:id', getBookingById);
 router.post('/bookings/:id/cancel', cancelBooking);
+router.post('/bookings/:id/reschedule', rescheduleBooking);
 
 router.get('/profile', getProfile);
 router.put('/profile', validate(updateProfileSchema), updateProfile);
