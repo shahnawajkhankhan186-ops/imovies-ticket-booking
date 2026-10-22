@@ -8,6 +8,7 @@ import { User } from '../models/User.js';
 import { ShowSeat } from '../models/ShowSeat.js';
 import { Payment } from '../models/Payment.js';
 import { Coupon } from '../models/Coupon.js';
+import { Favorite } from '../models/Favorite.js';
 import { createSeatHold, releaseUserHold } from '../services/booking.service.js';
 import { cancelBookingUser } from '../services/refund.service.js';
 import { calculateBookingPricing } from '../services/pricing.service.js';
@@ -15,6 +16,7 @@ import { BOOKING_STATUS, PAYMENT_STATUS, SEAT_STATUS } from '../constants/enums.
 import { MESSAGES } from '../constants/messages.js';
 import { razorpay } from '../config/razorpay.js';
 import { emitToShowRoom } from '../sockets/seatSocket.js';
+import { sendBookingConfirmationEmail } from '../utils/mailer.js';
 import { cleanupExpiredHolds } from '../jobs/expireHolds.js';
 
 export const holdSeatsSchema = z.object({
@@ -188,6 +190,30 @@ export async function testPayBooking(req, res, next) {
       await session.commitTransaction();
 
       emitToShowRoom(booking.showId, 'seats:booked', { seatLabels });
+
+      // Trigger confirmation email asynchronously
+      Booking.findById(booking._id)
+        .populate('userId', 'name email')
+        .populate({
+          path: 'showId',
+          populate: [{ path: 'movieId', select: 'title' }, { path: 'theatreId', select: 'name' }],
+        })
+        .then((b) => {
+          if (b && b.userId?.email) {
+            sendBookingConfirmationEmail({
+              to: b.userId.email,
+              name: b.userId.name,
+              bookingCode: b.bookingCode,
+              movieTitle: b.showId?.movieId?.title || 'Movie',
+              theatreName: b.showId?.theatreId?.name || 'Cinema',
+              showDate: b.showDateSnapshot || 'Confirmed',
+              showTime: b.showTimeSnapshot || '',
+              seats: b.seats.map((s) => s.seatLabel),
+              totalFormatted: `₹${(b.total / 100).toFixed(2)}`,
+            }).catch(() => {});
+          }
+        })
+        .catch(() => {});
 
       return res.status(200).json({
         message: 'Payment verified and booking confirmed successfully.',
@@ -539,6 +565,30 @@ export async function verifyRazorpayPayment(req, res, next) {
         bookingId: booking._id,
       });
 
+      // Trigger confirmation email asynchronously
+      Booking.findById(booking._id)
+        .populate('userId', 'name email')
+        .populate({
+          path: 'showId',
+          populate: [{ path: 'movieId', select: 'title' }, { path: 'theatreId', select: 'name' }],
+        })
+        .then((b) => {
+          if (b && b.userId?.email) {
+            sendBookingConfirmationEmail({
+              to: b.userId.email,
+              name: b.userId.name,
+              bookingCode: b.bookingCode,
+              movieTitle: b.showId?.movieId?.title || 'Movie',
+              theatreName: b.showId?.theatreId?.name || 'Cinema',
+              showDate: b.showDateSnapshot || 'Confirmed',
+              showTime: b.showTimeSnapshot || '',
+              seats: b.seats.map((s) => s.seatLabel),
+              totalFormatted: `₹${(b.total / 100).toFixed(2)}`,
+            }).catch(() => {});
+          }
+        })
+        .catch(() => {});
+
       return res.status(200).json({
         message: 'Payment verified successfully. Booking confirmed.',
         bookingId: booking._id,
@@ -549,6 +599,49 @@ export async function verifyRazorpayPayment(req, res, next) {
     } finally {
       session.endSession();
     }
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function getUserFavorites(req, res, next) {
+  try {
+    const favorites = await Favorite.find({ userId: req.user._id })
+      .populate('movieId')
+      .sort({ createdAt: -1 })
+      .lean();
+
+    return res.status(200).json({ favorites });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function toggleUserFavorite(req, res, next) {
+  try {
+    const movieId = req.params.movieId || req.body.movieId;
+    if (!movieId) {
+      return res.status(400).json({ error: 'Movie ID is required' });
+    }
+
+    const existing = await Favorite.findOne({ userId: req.user._id, movieId });
+    if (existing) {
+      await Favorite.deleteOne({ _id: existing._id });
+      return res.status(200).json({ message: 'Removed from favorites', isFavorite: false });
+    }
+
+    const favorite = await Favorite.create({ userId: req.user._id, movieId });
+    return res.status(201).json({ message: 'Added to favorites', isFavorite: true, favorite });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function removeUserFavorite(req, res, next) {
+  try {
+    const { movieId } = req.params;
+    await Favorite.deleteOne({ userId: req.user._id, movieId });
+    return res.status(200).json({ message: 'Removed from favorites', isFavorite: false });
   } catch (error) {
     next(error);
   }

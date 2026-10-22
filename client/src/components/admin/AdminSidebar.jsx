@@ -14,6 +14,7 @@ import {
   BarChart3,
   History,
   Settings,
+  MessageSquare,
 } from 'lucide-react';
 
 export const ADMIN_NAV_ITEMS = [
@@ -26,6 +27,7 @@ export const ADMIN_NAV_ITEMS = [
   { label: 'Verify Ticket', path: '/admin/verify-ticket', icon: ScanLine },
   { label: 'Payments', path: '/admin/payments', icon: CreditCard },
   { label: 'Users', path: '/admin/users', icon: Users },
+  { label: 'Reviews', path: '/admin/reviews', icon: MessageSquare },
   { label: 'Coupons', path: '/admin/coupons', icon: Tag },
   { label: 'Reports', path: '/admin/reports', icon: BarChart3 },
   { label: 'Audit Logs', path: '/admin/audit-logs', icon: History },

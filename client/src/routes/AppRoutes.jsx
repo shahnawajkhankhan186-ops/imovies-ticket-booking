@@ -3,6 +3,7 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 
 // Public Pages
 import HomePage from '../pages/public/HomePage';
+import LandingPage from '../pages/public/LandingPage';
 import MovieDetailPage from '../pages/public/MovieDetailPage';
 import ShowSelectionPage from '../pages/public/ShowSelectionPage';
 import SeatSelectionPage from '../pages/public/SeatSelectionPage';
@@ -18,11 +19,13 @@ import CheckoutPage from '../pages/user/CheckoutPage';
 import TicketPage from '../pages/user/TicketPage';
 import MyBookingsPage from '../pages/user/MyBookingsPage';
 import ProfilePage from '../pages/user/ProfilePage';
+import FavoritesPage from '../pages/user/FavoritesPage';
 
 // Admin Portal Pages
 import AdminLayout from '../pages/admin/AdminLayout';
 import AdminDashboardPage from '../pages/admin/AdminDashboardPage';
 import AdminMoviesPage from '../pages/admin/AdminMoviesPage';
+import AdminReviewsPage from '../pages/admin/AdminReviewsPage';
 import AdminTheatresPage from '../pages/admin/AdminTheatresPage';
 import AdminScreensPage from '../pages/admin/AdminScreensPage';
 import AdminShowsPage from '../pages/admin/AdminShowsPage';
@@ -44,6 +47,8 @@ export default function AppRoutes() {
     <Routes>
       {/* Public Routes */}
       <Route path="/" element={<HomePage />} />
+      <Route path="/landing" element={<LandingPage />} />
+      <Route path="/pages/landing/Landing" element={<LandingPage />} />
       <Route path="/movies/:id" element={<MovieDetailPage />} />
       <Route path="/movie/:id" element={<MovieDetailPage />} />
       <Route path="/movies/:id/shows" element={<ShowSelectionPage />} />
@@ -99,6 +104,30 @@ export default function AppRoutes() {
           </ProtectedRoute>
         }
       />
+      <Route
+        path="/favorites"
+        element={
+          <ProtectedRoute>
+            <FavoritesPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/watchlist"
+        element={
+          <ProtectedRoute>
+            <FavoritesPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/pages/favoriteshows/FavoriteShows"
+        element={
+          <ProtectedRoute>
+            <FavoritesPage />
+          </ProtectedRoute>
+        }
+      />
 
       {/* Protected Admin Routes */}
       <Route
@@ -119,6 +148,7 @@ export default function AppRoutes() {
         <Route path="verify-ticket" element={<AdminVerifyTicketPage />} />
         <Route path="payments" element={<AdminPaymentsPage />} />
         <Route path="users" element={<AdminUsersPage />} />
+        <Route path="reviews" element={<AdminReviewsPage />} />
         <Route path="coupons" element={<AdminCouponsPage />} />
         <Route path="reports" element={<AdminReportsPage />} />
         <Route path="audit-logs" element={<AdminAuditLogsPage />} />

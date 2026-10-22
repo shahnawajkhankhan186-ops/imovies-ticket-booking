@@ -1,8 +1,10 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { Search, Play } from 'lucide-react';
+import { Search, Play, Heart } from 'lucide-react';
 import api from '../../lib/api';
 import { useCity } from '../../context/CityContext';
+import { useAuth } from '../../hooks/useAuth';
+import toast from 'react-hot-toast';
 import MovieCard from '../../components/movies/MovieCard';
 import TrailerModal from '../../components/movies/TrailerModal';
 import LoadingSpinner from '../../components/ui/LoadingSpinner';
@@ -10,13 +12,33 @@ import EmptyState from '../../components/ui/EmptyState';
 
 export default function HomePage() {
   const { city } = useCity();
+  const { user } = useAuth();
   const [movies, setMovies] = useState([]);
+  const [favMovieIds, setFavMovieIds] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('NOW_SHOWING'); // NOW_SHOWING | UPCOMING
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedGenre, setSelectedGenre] = useState('');
   const [selectedLanguage, setSelectedLanguage] = useState('');
   const [trailerMovie, setTrailerMovie] = useState(null);
+
+  // Load user favorites to synchronize heart states
+  useEffect(() => {
+    async function loadFavs() {
+      if (!user) {
+        setFavMovieIds([]);
+        return;
+      }
+      try {
+        const res = await api.get('/user/favorites');
+        const ids = (res.data.favorites || []).map((f) => f.movieId?._id || f.movieId);
+        setFavMovieIds(ids);
+      } catch {
+        // quiet fail
+      }
+    }
+    loadFavs();
+  }, [user]);
 
   const fetchMovies = useCallback(async () => {
     setLoading(true);
@@ -53,6 +75,28 @@ export default function HomePage() {
   const genresList = ['Action', 'Sci-Fi', 'Adventure', 'Drama', 'Biography', 'Crime', 'History'];
   const languagesList = ['English', 'Hindi', 'Telugu', 'Tamil'];
 
+  const handleHeroToggleWatchlist = async () => {
+    if (!heroMovie) return;
+    if (!user) {
+      toast.error('Please login to save to watchlist');
+      return;
+    }
+    try {
+      const res = await api.post(`/user/favorites/${heroMovie._id}`);
+      if (res.data.isFavorite) {
+        setFavMovieIds((prev) => [...prev, heroMovie._id]);
+        toast.success(`"${heroMovie.title}" added to Watchlist!`);
+      } else {
+        setFavMovieIds((prev) => prev.filter((id) => id !== heroMovie._id));
+        toast.success(`"${heroMovie.title}" removed from Watchlist`);
+      }
+    } catch {
+      toast.error('Failed to update watchlist');
+    }
+  };
+
+  const isHeroFavorite = heroMovie && favMovieIds.includes(heroMovie._id);
+
   return (
     <div className="home-page pb-5">
       {/* Hero Section */}
@@ -87,6 +131,16 @@ export default function HomePage() {
                 <Link to={`/movies/${heroMovie._id}`} className="btn btn-danger btn-lg px-4 py-2 fw-semibold w-100 w-sm-auto text-center">
                   Book Tickets
                 </Link>
+                <button
+                  type="button"
+                  onClick={handleHeroToggleWatchlist}
+                  className={`btn btn-lg px-4 py-2 d-flex align-items-center gap-2 fw-semibold ${
+                    isHeroFavorite ? 'btn-danger' : 'btn-outline-danger'
+                  }`}
+                >
+                  <Heart size={18} fill={isHeroFavorite ? '#ffffff' : 'none'} color={isHeroFavorite ? '#ffffff' : '#dc3545'} />
+                  <span>{isHeroFavorite ? 'In Watchlist' : 'Add to Watchlist'}</span>
+                </button>
                 {heroMovie.trailerUrl && (
                   <button
                     type="button"
@@ -231,7 +285,13 @@ export default function HomePage() {
           <div className="row row-cols-2 row-cols-md-3 row-cols-lg-4 g-2 g-sm-3 g-md-4">
             {movies.map((movie) => (
               <div key={movie._id} className="col">
-                <MovieCard movie={movie} />
+                <MovieCard
+                  movie={movie}
+                  isFavInitially={favMovieIds.includes(movie._id)}
+                  onToggleFavorite={(id, isFav) => {
+                    setFavMovieIds((prev) => (isFav ? [...prev, id] : prev.filter((x) => x !== id)));
+                  }}
+                />
               </div>
             ))}
           </div>

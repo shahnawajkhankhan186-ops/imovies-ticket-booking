@@ -1,9 +1,40 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Star, Clock, Ticket } from 'lucide-react';
+import { Star, Clock, Ticket, Heart } from 'lucide-react';
+import api from '../../lib/api';
+import { useAuth } from '../../hooks/useAuth';
+import toast from 'react-hot-toast';
 
-export default function MovieCard({ movie }) {
+export default function MovieCard({ movie, isFavInitially = false, onToggleFavorite }) {
+  const { user } = useAuth();
+  const [isFavorite, setIsFavorite] = useState(isFavInitially);
+  const [loadingFav, setLoadingFav] = useState(false);
+
   if (!movie) return null;
+
+  const handleFavoriteClick = async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!user) {
+      toast.error('Please login to save to watchlist');
+      return;
+    }
+    try {
+      setLoadingFav(true);
+      const res = await api.post(`/user/favorites/${movie._id}`);
+      setIsFavorite(res.data.isFavorite);
+      if (res.data.isFavorite) {
+        toast.success(`Added "${movie.title}" to Watchlist!`);
+      } else {
+        toast.success(`Removed "${movie.title}" from Watchlist`);
+      }
+      if (onToggleFavorite) onToggleFavorite(movie._id, res.data.isFavorite);
+    } catch {
+      toast.error('Failed to update watchlist');
+    } finally {
+      setLoadingFav(false);
+    }
+  };
 
   return (
     <div className="im-card overflow-hidden h-100 d-flex flex-column">
@@ -20,6 +51,27 @@ export default function MovieCard({ movie }) {
             e.currentTarget.src = 'https://images.unsplash.com/photo-1635805737707-575885ab0820?w=600&auto=format&fit=crop&q=80';
           }}
         />
+
+        {/* Favorite Heart Button */}
+        <button
+          type="button"
+          onClick={handleFavoriteClick}
+          disabled={loadingFav}
+          aria-label="Add to watchlist"
+          className="position-absolute top-0 end-0 m-2 btn btn-sm rounded-circle p-2 d-flex align-items-center justify-content-center"
+          style={{
+            backgroundColor: 'rgba(10, 12, 19, 0.75)',
+            border: '1px solid rgba(255, 255, 255, 0.15)',
+            backdropFilter: 'blur(4px)',
+            zIndex: 2,
+          }}
+        >
+          <Heart
+            size={16}
+            color={isFavorite ? '#e50914' : '#ffffff'}
+            fill={isFavorite ? '#e50914' : 'none'}
+          />
+        </button>
 
         {/* Certificate Badge */}
         <span

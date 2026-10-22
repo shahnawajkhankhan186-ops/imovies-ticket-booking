@@ -11,6 +11,7 @@ import {
   Coupon,
   AuditLog,
   Setting,
+  Review,
 } from '../models/index.js';
 import {
   BOOKING_STATUS,
@@ -1077,6 +1078,55 @@ export async function updateAdminSettings(req, res, next) {
 
     await logAudit(req.user, 'UPDATE', AUDIT_ENTITIES.SETTING, after._id, before.toObject(), after.toObject(), req.ip);
     return res.status(200).json({ settings: after });
+  } catch (error) {
+    next(error);
+  }
+}
+
+// 13. Reviews Moderation
+export async function getAdminReviews(req, res, next) {
+  try {
+    const { page = 1, limit = 20, movieId } = req.query;
+    const filter = {};
+    if (movieId) filter.movieId = movieId;
+
+    const pageNum = Math.max(1, parseInt(page, 10));
+    const limitNum = Math.min(100, Math.max(1, parseInt(limit, 10)));
+    const skip = (pageNum - 1) * limitNum;
+
+    const [reviews, total] = await Promise.all([
+      Review.find(filter)
+        .populate('userId', 'name email')
+        .populate('movieId', 'title posterUrl')
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limitNum)
+        .lean(),
+      Review.countDocuments(filter),
+    ]);
+
+    return res.status(200).json({ reviews, total, page: pageNum });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function deleteAdminReview(req, res, next) {
+  try {
+    const review = await Review.findByIdAndDelete(req.params.id);
+    if (!review) return res.status(404).json({ error: MESSAGES.RESOURCE_NOT_FOUND });
+
+    await logAudit(
+      req.user,
+      'DELETE_REVIEW',
+      AUDIT_ENTITIES.USER,
+      review._id,
+      review.toObject(),
+      null,
+      req.ip
+    );
+
+    return res.status(200).json({ message: 'Review deleted successfully.' });
   } catch (error) {
     next(error);
   }

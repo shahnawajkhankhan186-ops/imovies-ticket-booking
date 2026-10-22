@@ -1,18 +1,22 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { Star, Clock, Calendar, Play, Ticket, Shield, MessageSquare, ArrowLeft } from 'lucide-react';
+import { Star, Clock, Calendar, Play, Ticket, MessageSquare, ArrowLeft, Heart } from 'lucide-react';
 import api from '../../lib/api';
 import { formatIST } from '../../lib/ist-date';
 import LoadingSpinner from '../../components/ui/LoadingSpinner';
 import TrailerModal from '../../components/movies/TrailerModal';
-import Button from '../../components/ui/Button';
+import { useAuth } from '../../hooks/useAuth';
+import toast from 'react-hot-toast';
 
 export default function MovieDetailPage() {
   const { id } = useParams();
+  const { user } = useAuth();
   const [movie, setMovie] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [trailerOpen, setTrailerOpen] = useState(false);
+  const [isFavorite, setIsFavorite] = useState(false);
+  const [favLoading, setFavLoading] = useState(false);
 
   useEffect(() => {
     async function loadMovie() {
@@ -20,6 +24,18 @@ export default function MovieDetailPage() {
       try {
         const res = await api.get(`/public/movies/${id}`);
         setMovie(res.data.movie);
+
+        // Check favorite status if logged in
+        if (user) {
+          try {
+            const favRes = await api.get('/user/favorites');
+            const favs = favRes.data.favorites || [];
+            const isFav = favs.some((f) => (f.movieId?._id || f.movieId) === id);
+            setIsFavorite(isFav);
+          } catch {
+            // ignore
+          }
+        }
       } catch (err) {
         setError(err.message);
       } finally {
@@ -27,7 +43,28 @@ export default function MovieDetailPage() {
       }
     }
     loadMovie();
-  }, [id]);
+  }, [id, user]);
+
+  const handleToggleWatchlist = async () => {
+    if (!user) {
+      toast.error('Please login to save to watchlist');
+      return;
+    }
+    try {
+      setFavLoading(true);
+      const res = await api.post(`/user/favorites/${id}`);
+      setIsFavorite(res.data.isFavorite);
+      if (res.data.isFavorite) {
+        toast.success(`"${movie.title}" added to your Watchlist!`);
+      } else {
+        toast.success(`"${movie.title}" removed from your Watchlist`);
+      }
+    } catch {
+      toast.error('Failed to update watchlist');
+    } finally {
+      setFavLoading(false);
+    }
+  };
 
   if (loading) return <LoadingSpinner text="Loading movie details..." fullScreen />;
   if (error || !movie) {
@@ -124,6 +161,19 @@ export default function MovieDetailPage() {
                 ) : (
                   <span className="badge bg-secondary p-3 fs-6 text-center w-100 w-sm-auto">Tickets Opening Soon</span>
                 )}
+
+                {/* Add to Watchlist / Favorite Button */}
+                <button
+                  type="button"
+                  onClick={handleToggleWatchlist}
+                  disabled={favLoading}
+                  className={`btn btn-lg px-4 py-2 d-flex align-items-center gap-2 fw-semibold transition ${
+                    isFavorite ? 'btn-danger' : 'btn-outline-danger'
+                  }`}
+                >
+                  <Heart size={20} fill={isFavorite ? '#ffffff' : 'none'} color={isFavorite ? '#ffffff' : '#dc3545'} />
+                  <span>{isFavorite ? 'In Watchlist' : 'Add to Watchlist'}</span>
+                </button>
 
                 {movie.trailerUrl && (
                   <button

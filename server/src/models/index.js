@@ -9,5 +9,6 @@ export { Payment } from './Payment.js';
 export { Refund } from './Refund.js';
 export { Coupon } from './Coupon.js';
 export { Review } from './Review.js';
+export { Favorite } from './Favorite.js';
 export { AuditLog } from './AuditLog.js';
 export { Setting } from './Setting.js';

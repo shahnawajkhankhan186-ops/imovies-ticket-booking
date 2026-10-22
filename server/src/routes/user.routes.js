@@ -14,6 +14,9 @@ import {
   updatePassword,
   postReview,
   getUserReviews,
+  getUserFavorites,
+  toggleUserFavorite,
+  removeUserFavorite,
   holdSeatsSchema,
   updateProfileSchema,
   updatePasswordSchema,
@@ -44,5 +47,10 @@ router.put('/password', validate(updatePasswordSchema), updatePassword);
 
 router.post('/reviews', validate(postReviewSchema), postReview);
 router.get('/reviews', getUserReviews);
+
+// Favorites / Watchlist
+router.get('/favorites', getUserFavorites);
+router.post('/favorites/:movieId', toggleUserFavorite);
+router.delete('/favorites/:movieId', removeUserFavorite);
 
 export default router;

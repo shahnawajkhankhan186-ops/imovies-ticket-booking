@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Film, MapPin, User, LogOut, Ticket, Shield } from 'lucide-react';
+import { Film, MapPin, User, LogOut, Ticket, Shield, Heart } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAuth } from '../hooks/useAuth';
 import { useCity } from '../context/CityContext';
@@ -120,6 +120,11 @@ export default function Navbar() {
         >
           <ul className="navbar-nav align-items-lg-center gap-2 mt-3 mt-lg-0 pt-2 pt-lg-0 border-top border-lg-0 border-secondary border-opacity-25">
             <li className="nav-item">
+              <Link to="/landing" className="nav-link text-light px-3 py-2 rounded-3 hover-bg-dark" onClick={() => setMobileMenuOpen(false)}>
+                Features
+              </Link>
+            </li>
+            <li className="nav-item">
               <Link to="/" className="nav-link text-light px-3 py-2 rounded-3 hover-bg-dark" onClick={() => setMobileMenuOpen(false)}>
                 Home
               </Link>
@@ -127,6 +132,17 @@ export default function Navbar() {
 
             {user ? (
               <>
+                <li className="nav-item">
+                  <Link
+                    to="/favorites"
+                    className="nav-link text-light px-3 d-flex align-items-center gap-1"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    <Heart size={16} className="text-danger" />
+                    <span>Watchlist</span>
+                  </Link>
+                </li>
+
                 <li className="nav-item">
                   <Link
                     to="/my-bookings"
@@ -187,6 +203,19 @@ export default function Navbar() {
                       display: userDropdownOpen ? 'block' : 'none',
                     }}
                   >
+                    <li>
+                      <Link
+                        to="/favorites"
+                        className="dropdown-item d-flex align-items-center gap-2"
+                        onClick={() => {
+                          setUserDropdownOpen(false);
+                          setMobileMenuOpen(false);
+                        }}
+                      >
+                        <Heart size={14} className="text-danger" />
+                        <span>My Watchlist</span>
+                      </Link>
+                    </li>
                     <li>
                       <Link
                         to="/profile"
