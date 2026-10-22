@@ -282,33 +282,48 @@ export async function getMe(req, res) {
 export async function forgotPassword(req, res, next) {
   try {
     const { email } = req.body;
-    const user = await User.findOne({ email });
-
-    let otp = null;
-    if (user) {
-      // Generate a secure 6-digit verification code / OTP
-      otp = Math.floor(100000 + Math.random() * 900000).toString();
-      user.resetPasswordToken = crypto.createHash('sha256').update(otp).digest('hex');
-      user.resetPasswordExpires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
-      await user.save();
-
-      // Dispatch OTP via Email asynchronously
-      sendPasswordResetEmail({ to: email, otp }).catch(() => {});
-
-      // Dispatch OTP via SMS asynchronously if user has phone
-      if (user.phone) {
-        sendPasswordResetSMS({ phone: user.phone, otp }).catch(() => {});
-      }
-
-      console.log(`\n\x1b[35m[PASSWORD RESET OTP DISPATCHED]\x1b[0m`);
-      console.log(`To: ${email}`);
-      console.log(`6-Digit OTP: \x1b[36m${otp}\x1b[0m\n`);
+    if (!email) {
+      return res.status(400).json({ error: 'Email address is required.' });
     }
 
-    // Return message and OTP (for instant demo/dev testing without waiting for SMTP)
+    const cleanEmail = email.toLowerCase().trim();
+    const user = await User.findOne({ email: cleanEmail });
+
+    if (!user) {
+      return res.status(404).json({
+        error: 'No account found with this email address. Please check the spelling or create an account.',
+        code: 'USER_NOT_FOUND',
+      });
+    }
+
+    // Generate a secure 6-digit verification code / OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    user.resetPasswordToken = crypto.createHash('sha256').update(otp).digest('hex');
+    user.resetPasswordExpires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+    await user.save();
+
+    // Await real email delivery via verified Gmail SMTP
+    try {
+      await sendPasswordResetEmail({ to: cleanEmail, otp });
+      console.log(`\n\x1b[35m[PASSWORD RESET OTP DELIVERED TO GMAIL]\x1b[0m`);
+      console.log(`To: ${cleanEmail}`);
+      console.log(`6-Digit OTP: \x1b[36m${otp}\x1b[0m\n`);
+    } catch (mailErr) {
+      console.error('[MAILER ERROR] Failed to deliver password reset OTP:', mailErr);
+      return res.status(500).json({
+        error: 'Failed to dispatch email. Please check your connection and try again.',
+        code: 'EMAIL_SEND_FAILED',
+      });
+    }
+
+    // Dispatch SMS asynchronously if user has phone
+    if (user.phone) {
+      sendPasswordResetSMS({ phone: user.phone, otp }).catch(() => {});
+    }
+
     return res.status(200).json({
-      message: 'A 6-digit verification OTP has been dispatched to your email & mobile.',
-      otp,
+      message: `A real 6-digit verification OTP has been sent to ${cleanEmail}. Please check your Gmail inbox (and Spam folder).`,
+      email: cleanEmail,
     });
   } catch (error) {
     next(error);
@@ -317,24 +332,35 @@ export async function forgotPassword(req, res, next) {
 
 export async function resetPassword(req, res, next) {
   try {
-    const { token, otp, newPassword } = req.body;
+    const { email, token, otp, newPassword } = req.body;
     const codeToVerify = (otp || token || '').trim();
 
     if (!codeToVerify) {
       return res.status(400).json({
-        error: 'OTP verification code is required.',
+        error: '6-digit OTP verification code is required.',
+      });
+    }
+
+    if (!newPassword || newPassword.length < 6) {
+      return res.status(400).json({
+        error: 'New password must be at least 6 characters long.',
       });
     }
 
     const hashedToken = crypto.createHash('sha256').update(codeToVerify).digest('hex');
-    const user = await User.findOne({
+    const query = {
       resetPasswordToken: hashedToken,
       resetPasswordExpires: { $gt: new Date() },
-    });
+    };
+    if (email && email.trim()) {
+      query.email = email.toLowerCase().trim();
+    }
+
+    const user = await User.findOne(query);
 
     if (!user) {
       return res.status(400).json({
-        error: 'Invalid or expired OTP verification code.',
+        error: 'Invalid or expired OTP code. Please check your email or request a new code.',
         code: 'INVALID_TOKEN',
       });
     }
@@ -345,7 +371,7 @@ export async function resetPassword(req, res, next) {
     await user.save();
 
     return res.status(200).json({
-      message: MESSAGES.PASSWORD_RESET_SUCCESS,
+      message: 'Password successfully updated! Please sign in with your new password.',
     });
   } catch (error) {
     next(error);
