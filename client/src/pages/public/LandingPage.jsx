@@ -110,7 +110,7 @@ export default function LandingPage() {
 
   return (
     <div className="landing-page overflow-hidden">
-      {/* Dynamic Keyframe style for 5s progress bar */}
+      {/* Dynamic Keyframe style for 5s progress bar and entrance animations */}
       <style>{`
         @keyframes heroTimerFill {
           0% { width: 0%; }
@@ -122,37 +122,106 @@ export default function LandingPage() {
         .hero-timer-paused {
           animation-play-state: paused !important;
         }
+        @keyframes heroTextGlide {
+          0% {
+            opacity: 0;
+            transform: translateY(24px);
+          }
+          100% {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        @keyframes heroPosterGlide {
+          0% {
+            opacity: 0;
+            transform: scale(0.92) translateY(20px);
+          }
+          100% {
+            opacity: 1;
+            transform: scale(1) translateY(0);
+          }
+        }
+        .hero-anim-text {
+          animation: heroTextGlide 0.75s cubic-bezier(0.16, 1, 0.3, 1) both;
+        }
+        .hero-anim-poster {
+          animation: heroPosterGlide 0.85s cubic-bezier(0.16, 1, 0.3, 1) both;
+        }
       `}</style>
 
-      {/* 1. AUTO-SLIDING HERO SECTION (CHANGES EVERY 5 SECONDS WITH FULL DETAILS) */}
+      {/* 1. AUTO-SLIDING HERO SECTION WITH FULL CINEMATIC ANIMATIONS (CHANGES EVERY 5 SECONDS) */}
       <section
-        className="position-relative text-white hero-carousel-wrapper"
+        className="position-relative text-white hero-carousel-wrapper overflow-hidden"
         onMouseEnter={() => setIsPaused(true)}
         onMouseLeave={() => setIsPaused(false)}
         style={{
           minHeight: '88vh',
-          background: `
-            linear-gradient(90deg, rgba(10, 12, 19, 0.96) 0%, rgba(10, 12, 19, 0.85) 45%, rgba(10, 12, 19, 0.7) 70%, rgba(10, 12, 19, 0.95) 100%),
-            linear-gradient(0deg, #0a0c13 0%, rgba(10, 12, 19, 0.2) 50%, rgba(10, 12, 19, 0.8) 100%),
-            url(${heroBg}) center/cover no-repeat
-          `,
-          transition: 'background-image 0.7s ease-in-out',
+          background: '#0a0c13',
         }}
       >
+        {/* STACKED BACKGROUND BANNERS WITH GPU-ACCELERATED CROSSFADE & KEN-BURNS ZOOM */}
+        {featuredMovies.map((movie, idx) => {
+          const isCurrent = idx === currentHeroIndex;
+          const bgUrl =
+            movie.bannerUrl ||
+            movie.posterUrl ||
+            'https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=1600&auto=format&fit=crop&q=80';
+
+          return (
+            <div
+              key={`hero-bg-${movie._id}`}
+              className="position-absolute top-0 start-0 w-100 h-100"
+              style={{
+                opacity: isCurrent ? 1 : 0,
+                transform: isCurrent ? 'scale(1)' : 'scale(1.08)',
+                transition: 'opacity 1.2s cubic-bezier(0.4, 0, 0.2, 1), transform 6s cubic-bezier(0.1, 0.9, 0.2, 1)',
+                pointerEvents: 'none',
+                zIndex: isCurrent ? 1 : 0,
+              }}
+            >
+              <img
+                src={bgUrl}
+                alt={movie.title}
+                className="w-100 h-100 object-fit-cover"
+                loading={idx < 2 ? 'eager' : 'lazy'}
+              />
+              {/* Deep Cinema Vignette & Gradients Overlay */}
+              <div
+                className="position-absolute top-0 start-0 w-100 h-100"
+                style={{
+                  background: `
+                    linear-gradient(90deg, rgba(10, 12, 19, 0.98) 0%, rgba(10, 12, 19, 0.9) 45%, rgba(10, 12, 19, 0.65) 75%, rgba(10, 12, 19, 0.95) 100%),
+                    linear-gradient(0deg, #0a0c13 0%, rgba(10, 12, 19, 0.25) 40%, rgba(10, 12, 19, 0.75) 100%)
+                  `,
+                }}
+              />
+            </div>
+          );
+        })}
+
         {/* Ambient Top Glow */}
         <div
           className="position-absolute top-0 start-0 w-100 h-100"
           style={{
-            background: 'radial-gradient(ellipse 75% 45% at 50% -10%, rgba(229, 9, 20, 0.22), transparent)',
+            background: 'radial-gradient(ellipse 75% 45% at 50% -10%, rgba(229, 9, 20, 0.25), transparent)',
             pointerEvents: 'none',
+            zIndex: 2,
           }}
         />
 
-        <div className="container position-relative py-5 d-flex flex-column justify-content-center" style={{ minHeight: '88vh' }}>
+        {/* HERO CONTENT CONTAINER */}
+        <div
+          className="container position-relative py-5 d-flex flex-column justify-content-center"
+          style={{ minHeight: '88vh', zIndex: 3 }}
+        >
           {currentMovie ? (
-            <div className="row align-items-center g-4 my-auto py-4">
-              {/* Left Column: Full Movie Details */}
-              <div className="col-12 col-lg-7 col-xl-8 text-start">
+            <div
+              key={`hero-content-${currentMovie._id}`}
+              className="row align-items-center g-4 my-auto py-4"
+            >
+              {/* Left Column: Full Movie Details with Entrance Animation */}
+              <div className="col-12 col-lg-7 col-xl-8 text-start hero-anim-text">
                 {/* Cinema Status & Format Badges */}
                 <div className="d-flex flex-wrap align-items-center gap-2 mb-3">
                   <div
@@ -305,8 +374,8 @@ export default function LandingPage() {
                 </div>
               </div>
 
-              {/* Right Column: 3D Poster Showcase (Desktop) */}
-              <div className="col-lg-5 col-xl-4 d-none d-lg-flex justify-content-center">
+              {/* Right Column: 3D Poster Showcase (Desktop) with Entrance Animation */}
+              <div className="col-lg-5 col-xl-4 d-none d-lg-flex justify-content-center hero-anim-poster">
                 <div
                   className="position-relative cursor-pointer group"
                   onClick={() => handleMovieClick(currentMovie._id)}
@@ -421,13 +490,13 @@ export default function LandingPage() {
                 )}
               </div>
 
-              {/* Progress Trackers for Listed Movies */}
+              {/* Progress Trackers for ALL Listed Movies */}
               <div className="d-flex align-items-center gap-2 overflow-x-auto pb-1" style={{ maxWidth: '650px' }}>
-                {featuredMovies.slice(0, 10).map((movie, idx) => {
+                {featuredMovies.map((movie, idx) => {
                   const isActive = idx === currentHeroIndex;
                   return (
                     <button
-                      key={movie._id}
+                      key={`hero-dot-${movie._id}`}
                       type="button"
                       onClick={() => setCurrentHeroIndex(idx)}
                       title={movie.title}
@@ -455,7 +524,7 @@ export default function LandingPage() {
 
               {/* Quick Prompt */}
               <div className="text-secondary small d-none d-lg-block" style={{ fontSize: '11px' }}>
-                Switches every 5 seconds • Hover to pause
+                Auto-changes every 5s • Hover to pause
               </div>
             </div>
           )}
