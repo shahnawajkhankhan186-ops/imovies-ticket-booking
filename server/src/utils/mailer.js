@@ -92,3 +92,38 @@ export async function sendBookingConfirmationEmail({ to, name, bookingCode, movi
 export async function sendReminderEmails() {
   console.log('[MAILER] Checked upcoming shows for reminder emails.');
 }
+
+/**
+ * Sends a 6-digit OTP password recovery email
+ */
+export async function sendPasswordResetEmail({ to, otp }) {
+  try {
+    const t = await getTransporter();
+    const mailOptions = {
+      from: process.env.SMTP_FROM || '"IMovies Security" <security@imovies.com>',
+      to,
+      subject: `IMovies — Password Reset OTP (${otp})`,
+      html: `
+        <div style="font-family: Arial, sans-serif; background: #0f1016; color: #ffffff; padding: 24px; border-radius: 8px; max-width: 500px; margin: auto;">
+          <h2 style="color: #e50914; margin-top: 0;">IMovies Security</h2>
+          <p>We received a request to reset your password. Use the verification code below:</p>
+          <div style="background: #1b1e2e; border: 1px dashed #e50914; border-radius: 8px; padding: 16px; text-align: center; margin: 20px 0;">
+            <span style="font-size: 32px; font-weight: bold; letter-spacing: 6px; color: #ffffff;">${otp}</span>
+          </div>
+          <p style="color: #a0aec0; font-size: 13px;">This OTP will expire in 60 minutes. If you did not make this request, please ignore this email.</p>
+        </div>
+      `,
+    };
+
+    if (process.env.NODE_ENV === 'test') {
+      return { messageId: 'test_otp' };
+    }
+
+    const info = await t.sendMail(mailOptions);
+    console.log(`[MAILER] Password reset OTP email sent to ${to}`);
+    return info;
+  } catch (error) {
+    console.warn('[MAILER WARN] Failed to send OTP email:', error.message);
+    return null;
+  }
+}

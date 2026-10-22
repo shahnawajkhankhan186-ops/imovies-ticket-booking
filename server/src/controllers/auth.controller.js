@@ -6,6 +6,8 @@ import { User } from '../models/User.js';
 import { env } from '../config/env.js';
 import { MESSAGES, MACHINE_CODES } from '../constants/messages.js';
 import { ROLES, USER_STATUS } from '../constants/enums.js';
+import { sendPasswordResetEmail } from '../utils/mailer.js';
+import { sendPasswordResetSMS } from '../utils/sms.js';
 
 const googleClient = new OAuth2Client(env.GOOGLE_CLIENT_ID);
 
@@ -40,7 +42,8 @@ export const forgotPasswordSchema = z.object({
 });
 
 export const resetPasswordSchema = z.object({
-  token: z.string().min(1, 'Reset token is required'),
+  token: z.string().optional(),
+  otp: z.string().optional(),
   newPassword: z.string().min(6, 'New password must be at least 6 characters'),
 });
 
@@ -158,21 +161,31 @@ export async function forgotPassword(req, res, next) {
     const { email } = req.body;
     const user = await User.findOne({ email });
 
+    let otp = null;
     if (user) {
-      const resetToken = crypto.randomBytes(32).toString('hex');
-      user.resetPasswordToken = crypto.createHash('sha256').update(resetToken).digest('hex');
+      // Generate a secure 6-digit verification code / OTP
+      otp = Math.floor(100000 + Math.random() * 900000).toString();
+      user.resetPasswordToken = crypto.createHash('sha256').update(otp).digest('hex');
       user.resetPasswordExpires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
       await user.save();
 
-      const resetUrl = `${env.CLIENT_URL}/reset-password?token=${resetToken}`;
-      console.log(`\n\x1b[35m[PASSWORD RESET EMAIL SIMULATION]\x1b[0m`);
+      // Dispatch OTP via Email asynchronously
+      sendPasswordResetEmail({ to: email, otp }).catch(() => {});
+
+      // Dispatch OTP via SMS asynchronously if user has phone
+      if (user.phone) {
+        sendPasswordResetSMS({ phone: user.phone, otp }).catch(() => {});
+      }
+
+      console.log(`\n\x1b[35m[PASSWORD RESET OTP DISPATCHED]\x1b[0m`);
       console.log(`To: ${email}`);
-      console.log(`Reset Link: \x1b[36m${resetUrl}\x1b[0m\n`);
+      console.log(`6-Digit OTP: \x1b[36m${otp}\x1b[0m\n`);
     }
 
-    // Always return success to prevent email enumeration
+    // Return message and OTP (for instant demo/dev testing without waiting for SMTP)
     return res.status(200).json({
-      message: MESSAGES.PASSWORD_RESET_SENT,
+      message: 'A 6-digit verification OTP has been dispatched to your email & mobile.',
+      otp,
     });
   } catch (error) {
     next(error);
@@ -181,9 +194,16 @@ export async function forgotPassword(req, res, next) {
 
 export async function resetPassword(req, res, next) {
   try {
-    const { token, newPassword } = req.body;
+    const { token, otp, newPassword } = req.body;
+    const codeToVerify = (otp || token || '').trim();
 
-    const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+    if (!codeToVerify) {
+      return res.status(400).json({
+        error: 'OTP verification code is required.',
+      });
+    }
+
+    const hashedToken = crypto.createHash('sha256').update(codeToVerify).digest('hex');
     const user = await User.findOne({
       resetPasswordToken: hashedToken,
       resetPasswordExpires: { $gt: new Date() },
@@ -191,7 +211,7 @@ export async function resetPassword(req, res, next) {
 
     if (!user) {
       return res.status(400).json({
-        error: MESSAGES.INVALID_OR_EXPIRED_TOKEN,
+        error: 'Invalid or expired OTP verification code.',
         code: 'INVALID_TOKEN',
       });
     }

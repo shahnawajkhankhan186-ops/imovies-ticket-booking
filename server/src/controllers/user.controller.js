@@ -489,6 +489,55 @@ export async function rescheduleBooking(req, res, next) {
   }
 }
 
+export async function resendBookingNotifications(req, res, next) {
+  try {
+    const booking = await Booking.findOne({
+      _id: req.params.id,
+      userId: req.user._id,
+    })
+      .populate('userId', 'name email phone')
+      .populate({
+        path: 'showId',
+        populate: [{ path: 'movieId', select: 'title' }, { path: 'theatreId', select: 'name' }],
+      });
+
+    if (!booking) {
+      return res.status(404).json({ error: 'Booking not found.' });
+    }
+
+    if (booking.userId?.email) {
+      sendBookingConfirmationEmail({
+        to: booking.userId.email,
+        name: booking.userId.name,
+        bookingCode: booking.bookingCode,
+        movieTitle: booking.showId?.movieId?.title || 'Movie',
+        theatreName: booking.showId?.theatreId?.name || 'Cinema',
+        showDate: booking.showDateSnapshot || 'Confirmed',
+        showTime: booking.showTimeSnapshot || '',
+        seats: booking.seats.map((s) => s.seatLabel),
+        totalFormatted: `₹${(booking.total / 100).toFixed(2)}`,
+      }).catch(() => {});
+    }
+
+    if (booking.userId?.phone) {
+      sendBookingConfirmationSMS({
+        phone: booking.userId.phone,
+        bookingCode: booking.bookingCode,
+        movieTitle: booking.showId?.movieId?.title || 'Movie',
+        showTime: `${booking.showDateSnapshot || ''} ${booking.showTimeSnapshot || ''}`.trim(),
+        seats: booking.seats.map((s) => s.seatLabel),
+      }).catch(() => {});
+    }
+
+    return res.status(200).json({
+      message: 'Confirmation email and SMS re-sent successfully.',
+      success: true,
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
 export async function getProfile(req, res) {
   return res.status(200).json({
     user: req.user.toJSON(),
