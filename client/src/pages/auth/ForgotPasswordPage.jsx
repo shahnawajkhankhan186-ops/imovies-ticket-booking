@@ -4,50 +4,71 @@ import api from '../../lib/api';
 import Input from '../../components/ui/Input';
 import Button from '../../components/ui/Button';
 import AlertBanner from '../../components/ui/AlertBanner';
-import { Film, KeyRound, CheckCircle2 } from 'lucide-react';
+import { Film, Mail, KeyRound, ArrowLeft, RefreshCw } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export default function ForgotPasswordPage() {
   const navigate = useNavigate();
 
-  const [step, setStep] = useState(1); // 1: Request, 2: Reset
+  const [step, setStep] = useState(1); // 1: Request OTP, 2: Enter OTP & Set New Password
   const [email, setEmail] = useState('');
   const [resetToken, setResetToken] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [resending, setResending] = useState(false);
   const [error, setError] = useState(null);
   const [info, setInfo] = useState(null);
 
   const handleRequestToken = async (e) => {
-    e.preventDefault();
+    if (e) e.preventDefault();
+    if (!email || !/^\S+@\S+\.\S+$/.test(email.trim())) {
+      setError('Please enter a valid email address.');
+      return;
+    }
+
     setLoading(true);
     setError(null);
     setInfo(null);
 
     try {
-      const res = await api.post('/auth/forgot-password', { email });
-      setInfo(res.data.message || 'A 6-digit verification OTP has been dispatched.');
-      if (res.data.otp || res.data.resetToken) {
-        setResetToken(res.data.otp || res.data.resetToken);
-      }
+      const res = await api.post('/auth/forgot-password', { email: email.trim() });
+      setInfo(res.data.message || `A real 6-digit verification OTP was dispatched to ${email.trim()}.`);
+      setResetToken(''); // User must type the real OTP from their Gmail inbox
       setStep(2);
-      toast.success(res.data.otp ? `OTP Sent! Verification code: ${res.data.otp}` : 'OTP Sent successfully!');
+      toast.success('Real verification OTP sent to your Gmail inbox!');
     } catch (err) {
-      setError(err.message || 'Failed to request OTP');
+      setError(err.response?.data?.error || err.message || 'Failed to dispatch verification OTP');
     } finally {
       setLoading(false);
     }
   };
 
+  const handleResendToken = async () => {
+    setResending(true);
+    setError(null);
+    try {
+      const res = await api.post('/auth/forgot-password', { email: email.trim() });
+      toast.success(res.data.message || 'New OTP sent to your Gmail inbox!');
+    } catch (err) {
+      setError(err.response?.data?.error || err.message || 'Failed to resend code');
+    } finally {
+      setResending(false);
+    }
+  };
+
   const handleResetPassword = async (e) => {
     e.preventDefault();
+    if (!resetToken || resetToken.trim().length !== 6) {
+      setError('Please enter the 6-digit verification OTP received in your Gmail.');
+      return;
+    }
     if (newPassword.length < 6) {
-      setError('Password must be at least 6 characters');
+      setError('New password must be at least 6 characters long.');
       return;
     }
     if (newPassword !== confirmPassword) {
-      setError('Passwords do not match');
+      setError('New passwords do not match.');
       return;
     }
 
@@ -55,15 +76,15 @@ export default function ForgotPasswordPage() {
     setError(null);
 
     try {
-      await api.post('/auth/reset-password', {
-        otp: resetToken,
-        token: resetToken,
+      const res = await api.post('/auth/reset-password', {
+        email: email.trim(),
+        otp: resetToken.trim(),
         newPassword,
       });
-      toast.success('Password successfully reset! Please sign in.');
+      toast.success(res.data.message || 'Password successfully updated! Please sign in.');
       navigate('/login');
     } catch (err) {
-      setError(err.message || 'Failed to reset password');
+      setError(err.response?.data?.error || err.message || 'Failed to reset password. OTP may be invalid or expired.');
     } finally {
       setLoading(false);
     }
@@ -80,8 +101,8 @@ export default function ForgotPasswordPage() {
           <h4 className="fw-bold m-0">Reset Your Password</h4>
           <p className="text-secondary small mt-1">
             {step === 1
-              ? 'Enter your registered email to receive a password recovery token'
-              : 'Enter your reset token and your new password'}
+              ? 'Enter your registered Gmail to receive a real 6-digit verification code'
+              : 'Enter the 6-digit code received in your Gmail to set a new password'}
           </p>
         </div>
 
@@ -102,7 +123,7 @@ export default function ForgotPasswordPage() {
             <Input
               type="email"
               label="Registered Email Address"
-              placeholder="you@example.com"
+              placeholder="you@gmail.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
@@ -110,19 +131,49 @@ export default function ForgotPasswordPage() {
             />
 
             <Button type="submit" variant="primary" size="lg" loading={loading} className="w-100 mt-2">
-              Send 6-Digit Verification OTP
+              Send Real OTP to My Gmail
             </Button>
           </form>
         ) : (
           <form onSubmit={handleResetPassword} className="d-flex flex-column gap-3">
-            <Input
-              label="6-Digit Verification OTP"
-              placeholder="Enter 6-digit OTP"
-              value={resetToken}
-              onChange={(e) => setResetToken(e.target.value)}
-              required
-              autoFocus
-            />
+            <div>
+              <div className="d-flex justify-content-between align-items-center mb-1">
+                <label className="form-label text-secondary small fw-medium m-0">
+                  6-Digit Gmail Verification OTP <span className="text-danger">*</span>
+                </label>
+                <button
+                  type="button"
+                  onClick={handleResendToken}
+                  disabled={resending}
+                  className="btn btn-link text-danger p-0 small text-decoration-none d-flex align-items-center gap-1"
+                  style={{ fontSize: '11px' }}
+                >
+                  <RefreshCw size={11} className={resending ? 'spin' : ''} />
+                  <span>{resending ? 'Sending...' : 'Resend OTP'}</span>
+                </button>
+              </div>
+
+              <input
+                type="text"
+                maxLength={6}
+                className="form-control text-center fw-bold text-light"
+                placeholder="••••••"
+                value={resetToken}
+                onChange={(e) => setResetToken(e.target.value.replace(/\D/g, ''))}
+                required
+                autoFocus
+                style={{
+                  background: '#0e101a',
+                  border: '1px solid #333d59',
+                  letterSpacing: '5px',
+                  fontSize: '20px',
+                  height: '48px',
+                }}
+              />
+              <div className="text-secondary mt-1.5" style={{ fontSize: '11px' }}>
+                Check your Gmail inbox and Spam folder for the 6-digit code.
+              </div>
+            </div>
 
             <Input
               type="password"
@@ -143,8 +194,20 @@ export default function ForgotPasswordPage() {
             />
 
             <Button type="submit" variant="primary" size="lg" loading={loading} className="w-100 mt-2">
-              Set New Password
+              Update Password
             </Button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setStep(1);
+                setError(null);
+                setInfo(null);
+              }}
+              className="btn btn-link text-secondary text-decoration-none small text-center mt-1"
+            >
+              &larr; Change email address
+            </button>
           </form>
         )}
 
