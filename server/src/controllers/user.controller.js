@@ -9,6 +9,7 @@ import { ShowSeat } from '../models/ShowSeat.js';
 import { Payment } from '../models/Payment.js';
 import { Coupon } from '../models/Coupon.js';
 import { Favorite } from '../models/Favorite.js';
+import { Show } from '../models/Show.js';
 import { createSeatHold, releaseUserHold } from '../services/booking.service.js';
 import { cancelBookingUser } from '../services/refund.service.js';
 import { calculateBookingPricing } from '../services/pricing.service.js';
@@ -17,6 +18,7 @@ import { MESSAGES } from '../constants/messages.js';
 import { razorpay } from '../config/razorpay.js';
 import { emitToShowRoom } from '../sockets/seatSocket.js';
 import { sendBookingConfirmationEmail } from '../utils/mailer.js';
+import { sendBookingConfirmationSMS } from '../utils/sms.js';
 import { cleanupExpiredHolds } from '../jobs/expireHolds.js';
 
 export const holdSeatsSchema = z.object({
@@ -191,9 +193,9 @@ export async function testPayBooking(req, res, next) {
 
       emitToShowRoom(booking.showId, 'seats:booked', { seatLabels });
 
-      // Trigger confirmation email asynchronously
+      // Trigger confirmation email & SMS asynchronously
       Booking.findById(booking._id)
-        .populate('userId', 'name email')
+        .populate('userId', 'name email phone')
         .populate({
           path: 'showId',
           populate: [{ path: 'movieId', select: 'title' }, { path: 'theatreId', select: 'name' }],
@@ -210,6 +212,15 @@ export async function testPayBooking(req, res, next) {
               showTime: b.showTimeSnapshot || '',
               seats: b.seats.map((s) => s.seatLabel),
               totalFormatted: `₹${(b.total / 100).toFixed(2)}`,
+            }).catch(() => {});
+          }
+          if (b && b.userId?.phone) {
+            sendBookingConfirmationSMS({
+              phone: b.userId.phone,
+              bookingCode: b.bookingCode,
+              movieTitle: b.showId?.movieId?.title || 'Movie',
+              showTime: `${b.showDateSnapshot || ''} ${b.showTimeSnapshot || ''}`.trim(),
+              seats: b.seats.map((s) => s.seatLabel),
             }).catch(() => {});
           }
         })
@@ -309,6 +320,170 @@ export async function cancelBooking(req, res, next) {
   try {
     const result = await cancelBookingUser(req.params.id, req.user._id);
     return res.status(200).json(result);
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function rescheduleBooking(req, res, next) {
+  try {
+    const booking = await Booking.findOne({
+      _id: req.params.id,
+      userId: req.user._id,
+      status: BOOKING_STATUS.CONFIRMED,
+    }).populate('showId');
+
+    if (!booking) {
+      return res.status(404).json({ error: 'Active confirmed booking not found for rescheduling.' });
+    }
+
+    const { newShowId, seatLabels } = req.body;
+    if (!newShowId) {
+      return res.status(400).json({ error: 'New show ID is required for rescheduling.' });
+    }
+
+    // Verify current show has not already started
+    const now = new Date();
+    if (booking.showId && new Date(booking.showId.startTime) <= now) {
+      return res.status(400).json({ error: 'Cannot reschedule a show that has already started.' });
+    }
+
+    const newShow = await Show.findById(newShowId)
+      .populate('movieId', 'title')
+      .populate('theatreId', 'name')
+      .populate('screenId', 'name');
+
+    if (!newShow || !newShow.isActive) {
+      return res.status(404).json({ error: 'Selected new show is not active or available.' });
+    }
+
+    if (new Date(newShow.startTime) <= now) {
+      return res.status(400).json({ error: 'Cannot reschedule to a past show.' });
+    }
+
+    const targetSeatLabels = Array.isArray(seatLabels) && seatLabels.length > 0
+      ? seatLabels
+      : booking.seats.map((s) => s.seatLabel);
+
+    if (targetSeatLabels.length !== booking.seats.length) {
+      return res.status(400).json({
+        error: `Rescheduling requires selecting exactly ${booking.seats.length} seats.`,
+      });
+    }
+
+    const session = await mongoose.startSession();
+    session.startTransaction();
+
+    try {
+      const oldShowId = booking.showId._id || booking.showId;
+      const oldSeatLabels = booking.seats.map((s) => s.seatLabel);
+
+      // 1. Release old seats
+      await ShowSeat.updateMany(
+        {
+          showId: oldShowId,
+          seatLabel: { $in: oldSeatLabels },
+          status: SEAT_STATUS.BOOKED,
+        },
+        {
+          $set: {
+            status: SEAT_STATUS.AVAILABLE,
+            heldBy: null,
+            holdExpiresAt: null,
+            bookingId: null,
+          },
+        },
+        { session }
+      );
+
+      // 2. Fetch new seats and verify availability
+      const availableNewSeats = await ShowSeat.find({
+        showId: newShowId,
+        seatLabel: { $in: targetSeatLabels },
+        $or: [
+          { status: SEAT_STATUS.AVAILABLE },
+          { status: SEAT_STATUS.HELD, holdExpiresAt: { $lt: now } },
+        ],
+      }).session(session);
+
+      if (availableNewSeats.length !== targetSeatLabels.length) {
+        throw new Error('Some of the selected seats in the new show are not available.');
+      }
+
+      // 3. Mark new seats as BOOKED
+      await ShowSeat.updateMany(
+        {
+          showId: newShowId,
+          seatLabel: { $in: targetSeatLabels },
+        },
+        {
+          $set: {
+            status: SEAT_STATUS.BOOKED,
+            heldBy: req.user._id,
+            bookingId: booking._id,
+          },
+        },
+        { session }
+      );
+
+      // 4. Update booking snapshots and seats
+      const newSeatsSnapshot = availableNewSeats.map((s) => ({
+        seatLabel: s.seatLabel,
+        category: s.category,
+        price: s.price,
+      }));
+
+      const { formatIST } = await import('../utils/ist-date.js');
+      booking.showId = newShowId;
+      booking.seats = newSeatsSnapshot;
+      booking.showDateSnapshot = formatIST(newShow.startTime, 'DD MMM YYYY');
+      booking.showTimeSnapshot = formatIST(newShow.startTime, 'hh:mm a');
+      await booking.save({ session });
+
+      await session.commitTransaction();
+
+      // Emit socket events to both rooms
+      emitToShowRoom(oldShowId, 'seats:released', { seatLabels: oldSeatLabels });
+      emitToShowRoom(newShowId, 'seats:booked', { seatLabels: targetSeatLabels });
+
+      // Send updated confirmation email & SMS
+      User.findById(req.user._id).then((u) => {
+        if (u?.email) {
+          sendBookingConfirmationEmail({
+            to: u.email,
+            name: u.name,
+            bookingCode: booking.bookingCode,
+            movieTitle: newShow.movieId?.title || 'Movie',
+            theatreName: newShow.theatreId?.name || 'Cinema',
+            showDate: booking.showDateSnapshot,
+            showTime: booking.showTimeSnapshot,
+            seats: targetSeatLabels,
+            totalFormatted: `₹${(booking.total / 100).toFixed(2)}`,
+          }).catch(() => {});
+        }
+        if (u?.phone) {
+          sendBookingConfirmationSMS({
+            phone: u.phone,
+            bookingCode: booking.bookingCode,
+            movieTitle: newShow.movieId?.title || 'Movie',
+            showTime: `${booking.showDateSnapshot} ${booking.showTimeSnapshot}`,
+            seats: targetSeatLabels,
+          }).catch(() => {});
+        }
+      }).catch(() => {});
+
+      return res.status(200).json({
+        message: 'Booking rescheduled successfully! Updated ticket details sent to email and SMS.',
+        booking,
+      });
+    } catch (err) {
+      if (session.inTransaction()) {
+        await session.abortTransaction();
+      }
+      return res.status(409).json({ error: err.message || 'Failed to reschedule booking.' });
+    } finally {
+      session.endSession();
+    }
   } catch (error) {
     next(error);
   }
@@ -565,9 +740,9 @@ export async function verifyRazorpayPayment(req, res, next) {
         bookingId: booking._id,
       });
 
-      // Trigger confirmation email asynchronously
+      // Trigger confirmation email & SMS asynchronously
       Booking.findById(booking._id)
-        .populate('userId', 'name email')
+        .populate('userId', 'name email phone')
         .populate({
           path: 'showId',
           populate: [{ path: 'movieId', select: 'title' }, { path: 'theatreId', select: 'name' }],
@@ -584,6 +759,15 @@ export async function verifyRazorpayPayment(req, res, next) {
               showTime: b.showTimeSnapshot || '',
               seats: b.seats.map((s) => s.seatLabel),
               totalFormatted: `₹${(b.total / 100).toFixed(2)}`,
+            }).catch(() => {});
+          }
+          if (b && b.userId?.phone) {
+            sendBookingConfirmationSMS({
+              phone: b.userId.phone,
+              bookingCode: b.bookingCode,
+              movieTitle: b.showId?.movieId?.title || 'Movie',
+              showTime: `${b.showDateSnapshot || ''} ${b.showTimeSnapshot || ''}`.trim(),
+              seats: b.seats.map((s) => s.seatLabel),
             }).catch(() => {});
           }
         })

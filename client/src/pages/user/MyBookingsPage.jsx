@@ -9,7 +9,7 @@ import LoadingSpinner from '../../components/ui/LoadingSpinner';
 import EmptyState from '../../components/ui/EmptyState';
 import ConfirmDialog from '../../components/ui/ConfirmDialog';
 import Modal from '../../components/ui/Modal';
-import { Film, Ticket, ArrowRight, XCircle, Star, AlertTriangle } from 'lucide-react';
+import { Film, Ticket, ArrowRight, XCircle, Star, AlertTriangle, Calendar, RefreshCw } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export default function MyBookingsPage() {
@@ -20,6 +20,13 @@ export default function MyBookingsPage() {
   // Cancel dialog state
   const [cancelTarget, setCancelTarget] = useState(null);
   const [cancelling, setCancelling] = useState(false);
+
+  // Reschedule state
+  const [rescheduleTarget, setRescheduleTarget] = useState(null);
+  const [rescheduling, setRescheduling] = useState(false);
+  const [availableShows, setAvailableShows] = useState([]);
+  const [loadingShows, setLoadingShows] = useState(false);
+  const [selectedNewShowId, setSelectedNewShowId] = useState('');
 
   // Review modal state
   const [reviewTarget, setReviewTarget] = useState(null);
@@ -55,6 +62,59 @@ export default function MyBookingsPage() {
     } finally {
       setCancelling(false);
       setCancelTarget(null);
+    }
+  };
+
+  const handleOpenReschedule = async (booking) => {
+    setRescheduleTarget(booking);
+    setSelectedNewShowId('');
+    setLoadingShows(true);
+    try {
+      const movieId = booking.showId?.movieId?._id || booking.showId?.movieId;
+      const city = booking.showId?.theatreId?.city;
+      if (movieId) {
+        const res = await api.get(`/public/movies/${movieId}/shows`, {
+          params: { city },
+        });
+        const theatres = res.data.theatres || [];
+        const flatShows = [];
+        theatres.forEach((t) => {
+          (t.shows || []).forEach((s) => {
+            if (s._id !== (booking.showId?._id || booking.showId) && new Date(s.startTime) > new Date()) {
+              flatShows.push({
+                ...s,
+                theatreName: t.theatre?.name || 'Cinema',
+                theatreCity: t.theatre?.city,
+              });
+            }
+          });
+        });
+        setAvailableShows(flatShows);
+      }
+    } catch (err) {
+      toast.error('Failed to load upcoming showtimes for rescheduling');
+    } finally {
+      setLoadingShows(false);
+    }
+  };
+
+  const handleConfirmReschedule = async () => {
+    if (!rescheduleTarget || !selectedNewShowId) {
+      toast.error('Please select a new showtime');
+      return;
+    }
+    setRescheduling(true);
+    try {
+      const res = await api.post(`/user/bookings/${rescheduleTarget._id}/reschedule`, {
+        newShowId: selectedNewShowId,
+      });
+      toast.success(res.data.message || 'Show rescheduled successfully!');
+      setRescheduleTarget(null);
+      fetchBookings();
+    } catch (err) {
+      toast.error(err.response?.data?.error || err.message || 'Failed to reschedule show');
+    } finally {
+      setRescheduling(false);
     }
   };
 
@@ -213,15 +273,27 @@ export default function MyBookingsPage() {
                     )}
 
                     {isConfirmed && !showHasPassed && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="text-danger d-flex align-items-center justify-content-center gap-1 flex-grow-1"
-                        onClick={() => setCancelTarget(b)}
-                      >
-                        <XCircle size={14} />
-                        <span>Cancel Ticket</span>
-                      </Button>
+                      <>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="text-info border-info border-opacity-50 d-flex align-items-center justify-content-center gap-1.5 flex-grow-1"
+                          onClick={() => handleOpenReschedule(b)}
+                        >
+                          <RefreshCw size={13} />
+                          <span>Reschedule</span>
+                        </Button>
+
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-danger d-flex align-items-center justify-content-center gap-1 flex-grow-1"
+                          onClick={() => setCancelTarget(b)}
+                        >
+                          <XCircle size={14} />
+                          <span>Cancel Ticket</span>
+                        </Button>
+                      </>
                     )}
 
                     {isConfirmed && showHasPassed && (
@@ -327,6 +399,89 @@ export default function MyBookingsPage() {
               </Button>
             </div>
           </form>
+        </Modal>
+      )}
+
+      {/* Reschedule Modal */}
+      {rescheduleTarget && (
+        <Modal
+          isOpen={Boolean(rescheduleTarget)}
+          onClose={() => setRescheduleTarget(null)}
+          title="Reschedule Movie Show"
+        >
+          <div className="d-flex flex-column gap-3">
+            <div className="im-glass p-3 rounded-3 small">
+              <div className="fw-bold text-light mb-1 fs-6">
+                {rescheduleTarget.showId?.movieId?.title || 'Movie'}
+              </div>
+              <div className="text-secondary">
+                Current Show: <span className="text-warning fw-semibold">{rescheduleTarget.showDateSnapshot} at {rescheduleTarget.showTimeSnapshot}</span> ({rescheduleTarget.showId?.theatreId?.name || 'Cinema'})
+              </div>
+              <div className="text-secondary mt-1">
+                Seats Booked: <span className="badge bg-secondary">{rescheduleTarget.seats.map((s) => s.seatLabel).join(', ')}</span>
+              </div>
+            </div>
+
+            <p className="text-secondary small m-0">
+              Select an alternative upcoming showtime for this movie. Your tickets will be transferred immediately without any cancellation fee.
+            </p>
+
+            {loadingShows ? (
+              <div className="text-center py-4">
+                <LoadingSpinner message="Finding other available showtimes..." />
+              </div>
+            ) : availableShows.length === 0 ? (
+              <div className="alert alert-info py-2.5 px-3 small mb-0">
+                No alternative upcoming shows available for this movie right now in your city.
+              </div>
+            ) : (
+              <div>
+                <label className="form-label text-secondary small fw-medium mb-1.5">
+                  Available Showtimes ({availableShows.length})
+                </label>
+                <div className="d-flex flex-column gap-2" style={{ maxHeight: '220px', overflowY: 'auto' }}>
+                  {availableShows.map((s) => {
+                    const isSelected = selectedNewShowId === s._id;
+                    return (
+                      <button
+                        key={s._id}
+                        type="button"
+                        onClick={() => setSelectedNewShowId(s._id)}
+                        className={`btn text-start p-2.5 rounded-3 d-flex justify-content-between align-items-center transition-all ${
+                          isSelected ? 'btn-danger' : 'btn-dark border-secondary'
+                        }`}
+                      >
+                        <div>
+                          <div className="fw-semibold small">{s.theatreName}</div>
+                          <div className="text-muted" style={{ fontSize: '11px' }}>
+                            {formatISTDateTime(s.startTime)} • {s.screenId?.name || 'Screen'}
+                          </div>
+                        </div>
+                        <span className={`badge ${isSelected ? 'bg-light text-dark' : 'bg-secondary'}`}>
+                          {isSelected ? 'Selected' : 'Choose'}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            <div className="d-flex justify-content-end gap-2 pt-2 border-top border-secondary border-opacity-25">
+              <Button type="button" variant="outline" onClick={() => setRescheduleTarget(null)}>
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                variant="primary"
+                disabled={!selectedNewShowId || rescheduling}
+                loading={rescheduling}
+                onClick={handleConfirmReschedule}
+              >
+                Confirm Reschedule
+              </Button>
+            </div>
+          </div>
         </Modal>
       )}
     </div>
