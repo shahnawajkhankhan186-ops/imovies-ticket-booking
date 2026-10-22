@@ -212,7 +212,7 @@ export default function SeatSelectionPage() {
         {error && <AlertBanner type="error" message={error} onClose={() => setError(null)} className="mb-4" />}
 
         {/* Seat Map Surface */}
-        <div className="im-glass p-4 rounded-4 shadow-lg mb-4">
+        <div className="im-glass p-2 p-sm-3 p-md-4 rounded-4 shadow-lg mb-4">
           <SeatMap
             layout={screen?.layout}
             seats={seats}
@@ -225,30 +225,36 @@ export default function SeatSelectionPage() {
 
         {/* Sticky Price & Checkout Bar */}
         <div
-          className="im-glass p-3 px-4 rounded-4 shadow-lg d-flex flex-wrap align-items-center justify-content-between gap-3 sticky-bottom"
-          style={{ bottom: '1rem', border: '1px solid var(--border-subtle)', zIndex: 100 }}
+          className="im-glass p-3 px-md-4 rounded-4 shadow-lg d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-3 sticky-bottom mb-2 mb-md-3"
+          style={{
+            bottom: '0.75rem',
+            border: '1px solid var(--border-subtle)',
+            zIndex: 100,
+            backdropFilter: 'blur(16px)',
+          }}
         >
-          <div>
+          <div className="d-flex flex-column">
             <div className="text-secondary small">
               Selected Seats:{' '}
               <strong className="text-white">
                 {selectedSeatLabels.length > 0 ? selectedSeatLabels.join(', ') : 'None'}
               </strong>
             </div>
-            <div className="fs-5 fw-bold text-light">
-              Preview Total:{' '}
-              <span className="text-danger">{formatPaise(previewSubtotal)}</span>
-              <span className="text-secondary small fw-normal ms-2">(taxes & fees calculated at checkout)</span>
+            <div className="fs-5 fw-bold text-light d-flex flex-wrap align-items-baseline gap-1">
+              <span>Preview Total:</span>
+              <span className="text-danger fs-4 fw-extrabold">{formatPaise(previewSubtotal)}</span>
+              <span className="text-secondary small fw-normal">(+ taxes at checkout)</span>
             </div>
           </div>
 
-          <div>
+          <div className="w-100 w-sm-auto">
             <Button
               variant="primary"
               size="lg"
               disabled={selectedSeatLabels.length === 0 || submitting}
               loading={submitting}
               onClick={handleProceedToPay}
+              className="w-100 w-sm-auto px-4"
             >
               {user ? 'Proceed to Pay' : 'Sign in & Book'}
             </Button>

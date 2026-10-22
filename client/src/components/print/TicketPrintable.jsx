@@ -16,7 +16,7 @@ export default function TicketPrintable({ booking }) {
   return (
     <div
       data-bs-theme="light"
-      className="ticket-card rounded-4 p-4 p-md-5"
+      className="ticket-card rounded-4 p-3 p-sm-4 p-md-5"
       style={{
         maxWidth: '680px',
         width: '100%',

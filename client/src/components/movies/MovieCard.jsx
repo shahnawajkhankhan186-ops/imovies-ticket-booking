@@ -92,7 +92,7 @@ export default function MovieCard({ movie, isFavInitially = false, onToggleFavor
       </div>
 
       {/* Info */}
-      <div className="p-3 d-flex flex-column flex-grow-1 justify-content-between">
+      <div className="p-2.5 p-sm-3 d-flex flex-column flex-grow-1 justify-content-between">
         <div>
           <h6 className="fw-bold text-light text-truncate mb-1" title={movie.title}>
             {movie.title}

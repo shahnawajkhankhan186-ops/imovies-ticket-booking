@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import SeatCell from './SeatCell';
 import SeatLegend from './SeatLegend';
 import { formatPaise } from '../../lib/currency';
+import { ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
 
 export default function SeatMap({
   layout,
@@ -12,9 +13,15 @@ export default function SeatMap({
   showDetails = false,
   pricing = {},
 }) {
+  const [zoom, setZoom] = useState(1);
+
   if (!layout || !layout.cells || layout.cells.length === 0) {
     return <div className="text-secondary text-center py-5">Screen layout not available.</div>;
   }
+
+  const handleZoomIn = () => setZoom((z) => Math.min(1.4, +(z + 0.15).toFixed(2)));
+  const handleZoomOut = () => setZoom((z) => Math.max(0.75, +(z - 0.15).toFixed(2)));
+  const handleZoomReset = () => setZoom(1);
 
   // Create a fast lookup map for seats by seatLabel
   const seatMap = new Map();
@@ -47,8 +54,55 @@ export default function SeatMap({
 
   return (
     <div className="seat-map-wrapper w-100 d-flex flex-column align-items-center py-4">
+      {/* Top Toolbar: Screen Hint & Mobile Zoom Controls */}
+      <div className="w-100 d-flex flex-wrap align-items-center justify-content-between gap-2 px-3 mb-4" style={{ maxWidth: '780px' }}>
+        <div className="d-flex align-items-center gap-1.5 text-secondary small d-md-none">
+          <span className="badge bg-dark border border-secondary text-secondary px-2 py-1" style={{ fontSize: '10px' }}>
+            👈 Swipe to explore seats 👉
+          </span>
+        </div>
+
+        {/* Zoom Controls */}
+        <div className="d-flex align-items-center gap-1 ms-auto bg-dark p-1 rounded-pill border border-secondary border-opacity-50">
+          <button
+            type="button"
+            onClick={handleZoomOut}
+            disabled={zoom <= 0.75}
+            className="btn btn-sm btn-link text-light p-1 rounded-circle"
+            title="Zoom Out"
+            aria-label="Zoom Out"
+          >
+            <ZoomOut size={15} />
+          </button>
+          <span className="small text-secondary px-1 fw-bold" style={{ fontSize: '11px', minWidth: '38px', textAlign: 'center' }}>
+            {Math.round(zoom * 100)}%
+          </span>
+          <button
+            type="button"
+            onClick={handleZoomIn}
+            disabled={zoom >= 1.4}
+            className="btn btn-sm btn-link text-light p-1 rounded-circle"
+            title="Zoom In"
+            aria-label="Zoom In"
+          >
+            <ZoomIn size={15} />
+          </button>
+          {zoom !== 1 && (
+            <button
+              type="button"
+              onClick={handleZoomReset}
+              className="btn btn-sm btn-link text-danger p-1 rounded-circle ms-1"
+              title="Reset Zoom"
+              aria-label="Reset Zoom"
+            >
+              <RotateCcw size={13} />
+            </button>
+          )}
+        </div>
+      </div>
+
       {/* Screen Indicator */}
-      <div className="w-100 text-center mb-5" style={{ maxWidth: '680px' }}>
+      <div className="w-100 text-center mb-5 px-3" style={{ maxWidth: '680px' }}>
         <div
           className="mx-auto"
           style={{
@@ -64,9 +118,25 @@ export default function SeatMap({
         </div>
       </div>
 
-      {/* Seat Grid */}
-      <div className="overflow-x-auto w-100 d-flex justify-content-center px-2 py-2">
-        <div className="d-flex flex-column align-items-center" style={{ minWidth: 'max-content' }}>
+      {/* Seat Grid Scrollable Area */}
+      <div
+        className="w-100 px-2 py-3 touch-scroll"
+        style={{
+          overflowX: 'auto',
+          textAlign: 'center',
+          WebkitOverflowScrolling: 'touch',
+        }}
+      >
+        <div
+          className="d-inline-flex flex-column align-items-center"
+          style={{
+            minWidth: 'max-content',
+            transform: `scale(${zoom})`,
+            transformOrigin: 'top center',
+            transition: 'transform 0.15s ease-out',
+            paddingBottom: zoom > 1 ? `${(zoom - 1) * 200}px` : '0px',
+          }}
+        >
           {rowGroups.map((group) => {
             const isNewCategory = group.category !== lastCategory;
             lastCategory = group.category;
@@ -88,7 +158,7 @@ export default function SeatMap({
                 <div className="d-flex align-items-center justify-content-center mb-1">
                   {/* Left Row Label */}
                   <span
-                    className="text-secondary fw-bold me-3 text-center"
+                    className="text-secondary fw-bold me-2 me-sm-3 text-center"
                     style={{ width: '22px', fontSize: '12px' }}
                     aria-hidden="true"
                   >
@@ -112,7 +182,7 @@ export default function SeatMap({
 
                   {/* Right Row Label */}
                   <span
-                    className="text-secondary fw-bold ms-3 text-center"
+                    className="text-secondary fw-bold ms-2 ms-sm-3 text-center"
                     style={{ width: '22px', fontSize: '12px' }}
                     aria-hidden="true"
                   >

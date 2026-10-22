@@ -95,21 +95,24 @@ export default function MyBookingsPage() {
         </div>
 
         {/* Status Filter Tabs */}
-        <div className="btn-group im-glass p-1 rounded-3">
-          {[
-            { id: 'ALL', label: 'All' },
-            { id: 'CONFIRMED', label: 'Confirmed' },
-            { id: 'AWAITING_PAYMENT', label: 'Pending Hold' },
-            { id: 'CANCELLED', label: 'Cancelled / Expired' },
-          ].map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setFilter(tab.id)}
-              className={`btn btn-sm ${filter === tab.id ? 'btn-primary' : 'btn-link text-secondary text-decoration-none'}`}
-            >
-              {tab.label}
-            </button>
-          ))}
+        <div className="im-glass p-1 rounded-3 overflow-x-auto w-100 w-md-auto no-scrollbar">
+          <div className="btn-group flex-nowrap w-100">
+            {[
+              { id: 'ALL', label: 'All' },
+              { id: 'CONFIRMED', label: 'Confirmed' },
+              { id: 'AWAITING_PAYMENT', label: 'Pending Hold' },
+              { id: 'CANCELLED', label: 'Cancelled / Expired' },
+            ].map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setFilter(tab.id)}
+                className={`btn btn-sm text-nowrap px-2.5 px-sm-3 py-1.5 ${filter === tab.id ? 'btn-primary' : 'btn-link text-secondary text-decoration-none'}`}
+                style={{ fontSize: '12px' }}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
@@ -118,7 +121,7 @@ export default function MyBookingsPage() {
           <LoadingSpinner message="Loading your tickets..." />
         </div>
       ) : filteredBookings.length === 0 ? (
-        <div className="im-glass p-5 rounded-4 text-center">
+        <div className="im-glass p-4 p-sm-5 rounded-4 text-center">
           <EmptyState
             title="No Bookings Found"
             message={
@@ -144,7 +147,7 @@ export default function MyBookingsPage() {
             return (
               <div
                 key={b._id}
-                className="im-glass p-4 rounded-4 transition-all"
+                className="im-glass p-3 p-sm-4 rounded-4 transition-all"
                 style={{ border: isHold ? '1px solid #f59e0b' : '1px solid var(--border-color)' }}
               >
                 <div className="row g-3 align-items-center">
@@ -153,22 +156,22 @@ export default function MyBookingsPage() {
                     <img
                       src={movie?.posterUrl || 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=300'}
                       alt={movie?.title}
-                      className="rounded-3 shadow"
-                      style={{ width: '80px', height: '115px', objectFit: 'cover' }}
+                      className="rounded-3 shadow flex-shrink-0"
+                      style={{ width: '70px', height: '100px', objectFit: 'cover' }}
                     />
                   </div>
 
                   {/* Details */}
-                  <div className="col">
+                  <div className="col min-w-0">
                     <div className="d-flex flex-wrap align-items-center gap-2 mb-1">
-                      <h5 className="fw-bold m-0">{movie?.title || 'Movie'}</h5>
+                      <h5 className="fw-bold m-0 text-truncate" style={{ maxWidth: '100%' }}>{movie?.title || 'Movie'}</h5>
                       <StatusBadge status={b.status} />
                       <span className="badge bg-dark border border-secondary text-secondary small">
                         Ref: {b.bookingCode}
                       </span>
                     </div>
 
-                    <div className="text-secondary small mb-2">
+                    <div className="text-secondary small mb-1.5 text-truncate">
                       <span>{theatre?.name}, {theatre?.city}</span> • <span>{screen?.name}</span> • <span>{show?.format} ({show?.language})</span>
                     </div>
 
@@ -179,20 +182,20 @@ export default function MyBookingsPage() {
                     <div className="d-flex flex-wrap gap-2 align-items-center">
                       <span className="text-secondary small">Seats:</span>
                       {b.seats?.map((s) => (
-                        <span key={s.seatLabel} className="badge bg-secondary">
+                        <span key={s.seatLabel} className="badge bg-secondary" style={{ fontSize: '11px' }}>
                           {s.seatLabel}
                         </span>
                       ))}
-                      <span className="ms-2 fw-bold text-light">Total: {formatINR(b.total)}</span>
+                      <span className="ms-auto ms-sm-2 fw-bold text-light">Total: {formatINR(b.total)}</span>
                     </div>
                   </div>
 
                   {/* Action Buttons */}
-                  <div className="col-lg-auto d-flex flex-column gap-2">
+                  <div className="col-12 col-lg-auto d-flex flex-row flex-lg-column gap-2 mt-2 mt-lg-0 border-top border-lg-0 border-secondary border-opacity-25 pt-2 pt-lg-0">
                     {isHold && (
                       <Link
                         to={`/checkout/${b._id}`}
-                        className="btn btn-warning btn-sm d-flex align-items-center justify-content-center gap-2"
+                        className="btn btn-warning btn-sm d-flex align-items-center justify-content-center gap-2 flex-grow-1"
                       >
                         <span>Resume Payment</span>
                         <ArrowRight size={14} />
@@ -202,7 +205,7 @@ export default function MyBookingsPage() {
                     {isConfirmed && (
                       <Link
                         to={`/ticket/${b._id}`}
-                        className="btn btn-outline-light btn-sm d-flex align-items-center justify-content-center gap-2"
+                        className="btn btn-outline-light btn-sm d-flex align-items-center justify-content-center gap-2 flex-grow-1"
                       >
                         <Ticket size={14} />
                         <span>View E-Ticket</span>
@@ -213,7 +216,7 @@ export default function MyBookingsPage() {
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="text-danger d-flex align-items-center justify-content-center gap-1"
+                        className="text-danger d-flex align-items-center justify-content-center gap-1 flex-grow-1"
                         onClick={() => setCancelTarget(b)}
                       >
                         <XCircle size={14} />

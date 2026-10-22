@@ -102,12 +102,12 @@ export default function MovieDetailPage() {
 
           <div className="row g-4 align-items-center">
             {/* Poster */}
-            <div className="col-md-4 col-lg-3 text-center text-md-start">
+            <div className="col-12 col-md-4 col-lg-3 text-center text-md-start">
               <img
                 src={movie.posterUrl}
                 alt={movie.title}
                 className="img-fluid rounded-4 shadow-lg border border-secondary"
-                style={{ maxHeight: '380px', width: 'auto', aspectRatio: '2/3', objectFit: 'cover' }}
+                style={{ maxHeight: '320px', width: 'auto', aspectRatio: '2/3', objectFit: 'cover' }}
                 onError={(e) => {
                   e.currentTarget.onerror = null;
                   e.currentTarget.src = 'https://images.unsplash.com/photo-1635805737707-575885ab0820?w=600&auto=format&fit=crop&q=80';
@@ -116,7 +116,7 @@ export default function MovieDetailPage() {
             </div>
 
             {/* Core Details */}
-            <div className="col-md-8 col-lg-9">
+            <div className="col-12 col-md-8 col-lg-9">
               <div className="d-flex flex-wrap align-items-center gap-2 mb-2">
                 <span className="badge bg-danger px-2 py-1 text-uppercase">{movie.certificate}</span>
                 <span className="badge bg-dark border border-secondary text-light">
@@ -131,9 +131,9 @@ export default function MovieDetailPage() {
                 )}
               </div>
 
-              <h1 className="display-5 fw-extrabold text-white mb-2">{movie.title}</h1>
+              <h1 className="fs-2 fs-md-1 display-md-5 fw-extrabold text-white mb-2">{movie.title}</h1>
 
-              <div className="d-flex flex-wrap align-items-center gap-3 text-secondary small mb-3">
+              <div className="d-flex flex-wrap align-items-center gap-2 gap-sm-3 text-secondary small mb-3">
                 <span className="d-flex align-items-center gap-1">
                   <Clock size={14} /> {movie.durationMinutes} mins
                 </span>
@@ -152,14 +152,14 @@ export default function MovieDetailPage() {
               </p>
 
               {/* Action Buttons */}
-              <div className="d-flex flex-wrap gap-3">
+              <div className="d-flex flex-column flex-sm-row gap-2 gap-sm-3">
                 {!isUpcoming ? (
-                  <Link to={`/movies/${movie._id}/shows`} className="btn btn-danger btn-lg px-4 py-2 d-flex align-items-center gap-2 fw-semibold">
+                  <Link to={`/movies/${movie._id}/shows`} className="btn btn-danger btn-lg px-4 py-2 d-flex align-items-center justify-content-center gap-2 fw-semibold w-100 w-sm-auto">
                     <Ticket size={20} />
                     <span>Book Tickets</span>
                   </Link>
                 ) : (
-                  <span className="badge bg-secondary p-3 fs-6">Tickets Opening Soon</span>
+                  <span className="badge bg-secondary p-3 fs-6 text-center w-100 w-sm-auto">Tickets Opening Soon</span>
                 )}
 
                 {/* Add to Watchlist / Favorite Button */}
@@ -179,7 +179,7 @@ export default function MovieDetailPage() {
                   <button
                     type="button"
                     onClick={() => setTrailerOpen(true)}
-                    className="btn btn-outline-light btn-lg px-4 py-2 d-flex align-items-center gap-2 fw-semibold"
+                    className="btn btn-outline-light btn-lg px-4 py-2 d-flex align-items-center justify-content-center gap-2 fw-semibold w-100 w-sm-auto"
                   >
                     <Play size={18} fill="#ffffff" />
                     <span>Watch Trailer</span>

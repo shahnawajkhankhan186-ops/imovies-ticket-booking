@@ -92,19 +92,19 @@ export default function AdminUsersPage() {
     <div>
       <div className="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-3 mb-4">
         <div>
-          <h2 className="fw-bold m-0">User Accounts & RBAC</h2>
+          <h2 className="fw-bold m-0 fs-3 fs-sm-2">User Accounts & RBAC</h2>
           <p className="text-secondary small m-0">Directory of registered patrons, account states, and role allocations.</p>
         </div>
         <button
           onClick={() => setShowAddModal(true)}
-          className="btn btn-danger d-inline-flex align-items-center gap-2 rounded-pill px-4 py-2 fw-medium shadow"
+          className="btn btn-danger d-inline-flex align-items-center justify-content-center gap-2 rounded-pill px-4 py-2 fw-medium shadow w-100 w-sm-auto"
         >
           <UserPlus size={16} />
           <span>+ Add New Admin</span>
         </button>
       </div>
 
-      <div className="im-glass p-4 rounded-4">
+      <div className="im-glass p-3 p-sm-4 rounded-4">
         {loading ? (
           <div className="text-center py-5">
             <LoadingSpinner message="Loading user directory..." />
@@ -112,8 +112,8 @@ export default function AdminUsersPage() {
         ) : users.length === 0 ? (
           <div className="text-center py-5 text-secondary">No users found.</div>
         ) : (
-          <div className="table-responsive">
-            <table className="table table-dark table-hover align-middle mb-0" style={{ background: 'transparent' }}>
+          <div className="table-responsive touch-scroll">
+            <table className="table table-dark table-hover align-middle mb-0 text-nowrap" style={{ background: 'transparent' }}>
               <thead>
                 <tr className="text-secondary small text-uppercase">
                   <th>User Profile</th>

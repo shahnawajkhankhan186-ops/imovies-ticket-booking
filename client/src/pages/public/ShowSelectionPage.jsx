@@ -84,7 +84,7 @@ export default function ShowSelectionPage() {
         </div>
 
         {/* 7-Day Date Carousel */}
-        <div className="im-glass p-3 rounded-4 mb-4 overflow-x-auto">
+        <div className="im-glass p-2.5 p-sm-3 rounded-4 mb-4 overflow-x-auto touch-scroll no-scrollbar">
           <div className="d-flex align-items-center gap-2" style={{ minWidth: 'max-content' }}>
             {next7Days.map((d) => {
               const isSelected = d.dateStr === selectedDateStr;
@@ -98,7 +98,7 @@ export default function ShowSelectionPage() {
                       ? 'btn-danger shadow'
                       : 'btn-dark border-secondary hover-border-danger text-light'
                   }`}
-                  style={{ minWidth: '78px' }}
+                  style={{ minWidth: '74px' }}
                 >
                   <span className="small text-uppercase fw-semibold" style={{ fontSize: '11px' }}>
                     {d.isToday ? 'Today' : d.dayName}
@@ -123,9 +123,9 @@ export default function ShowSelectionPage() {
             description={`There are no shows scheduled for this movie in ${city} on ${selectedDateStr}. Try picking another date or city.`}
           />
         ) : (
-          <div className="d-flex flex-column gap-4">
+          <div className="d-flex flex-column gap-3 gap-sm-4">
             {theatresData.map((item) => (
-              <div key={item.theatre._id} className="im-card p-4 rounded-4">
+              <div key={item.theatre._id} className="im-card p-3 p-sm-4 rounded-4">
                 {/* Theatre Header */}
                 <div className="d-flex flex-wrap justify-content-between align-items-center gap-2 border-bottom border-secondary border-opacity-25 pb-3 mb-3">
                   <div>
@@ -139,15 +139,15 @@ export default function ShowSelectionPage() {
                 {/* Screens & Showtimes */}
                 <div className="d-flex flex-column gap-3">
                   {item.screens.map((sGroup) => (
-                    <div key={sGroup.screen._id} className="row g-3 align-items-center">
-                      <div className="col-md-3">
+                    <div key={sGroup.screen._id} className="row g-2 g-sm-3 align-items-center">
+                      <div className="col-12 col-md-3">
                         <span className="text-light fw-semibold small d-block">{sGroup.screen.name}</span>
                         <span className="text-secondary" style={{ fontSize: '11px' }}>
                           M-Ticket Available
                         </span>
                       </div>
-                      <div className="col-md-9">
-                        <div className="d-flex flex-wrap gap-3">
+                      <div className="col-12 col-md-9">
+                        <div className="d-flex flex-wrap gap-2 gap-sm-3">
                           {sGroup.shows.map((show) => (
                             <ShowTimeChip key={show._id} show={show} />
                           ))}

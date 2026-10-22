@@ -91,22 +91,22 @@ export default function TicketPage() {
               </div>
             </div>
 
-            <div className="d-flex gap-2">
+            <div className="d-flex flex-wrap gap-2 w-100 w-lg-auto">
               <Button
                 variant="outline"
                 onClick={handlePrint}
-                className="d-flex align-items-center gap-2"
+                className="d-flex align-items-center justify-content-center gap-2 flex-grow-1 flex-sm-grow-0"
               >
                 <Printer size={16} />
                 <span>Print / Save PDF</span>
               </Button>
 
-              <Link to="/my-bookings" className="btn btn-secondary d-flex align-items-center gap-2">
+              <Link to="/my-bookings" className="btn btn-secondary d-flex align-items-center justify-content-center gap-2 flex-grow-1 flex-sm-grow-0">
                 <Calendar size={16} />
                 <span>My Bookings</span>
               </Link>
 
-              <Link to="/" className="btn btn-primary d-flex align-items-center gap-2">
+              <Link to="/" className="btn btn-primary d-flex align-items-center justify-content-center gap-2 flex-grow-1 flex-sm-grow-0">
                 <Home size={16} />
                 <span>Home</span>
               </Link>
@@ -116,30 +116,30 @@ export default function TicketPage() {
       </div>
 
       {/* Printable E-Ticket Component */}
-      <div className="d-flex justify-content-center">
+      <div className="d-flex justify-content-center px-0 px-sm-2">
         <div style={{ maxWidth: '780px', width: '100%' }}>
           <TicketPrintable booking={booking} />
         </div>
       </div>
 
       {/* Action Bar under Ticket */}
-      <div className="d-print-none d-flex flex-wrap justify-content-center gap-3 mt-4 pb-4">
+      <div className="d-print-none d-flex flex-wrap justify-content-center gap-2.5 gap-sm-3 mt-4 pb-4">
         <Button
           variant="primary"
           size="lg"
           onClick={handlePrint}
-          className="d-flex align-items-center gap-2 px-4 shadow"
+          className="d-flex align-items-center justify-content-center gap-2 px-3 px-sm-4 shadow w-100 w-sm-auto"
         >
           <Printer size={18} />
           <span>Print / Download PDF Ticket</span>
         </Button>
 
-        <Link to="/my-bookings" className="btn btn-outline-light btn-lg d-flex align-items-center gap-2 px-4">
+        <Link to="/my-bookings" className="btn btn-outline-light btn-lg d-flex align-items-center justify-content-center gap-2 px-3 px-sm-4 w-100 w-sm-auto">
           <Calendar size={18} />
           <span>My Bookings</span>
         </Link>
 
-        <Link to="/" className="btn btn-outline-secondary btn-lg d-flex align-items-center gap-2 px-4">
+        <Link to="/" className="btn btn-outline-secondary btn-lg d-flex align-items-center justify-content-center gap-2 px-3 px-sm-4 w-100 w-sm-auto">
           <Home size={18} />
           <span>Book More Movies</span>
         </Link>

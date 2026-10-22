@@ -12,7 +12,7 @@ export default function MetricCard({ title, value, icon: Icon, color = 'danger',
   const scheme = colorMap[color] || colorMap.danger;
 
   return (
-    <div className="im-card p-4 rounded-4 h-100 d-flex flex-column justify-content-between">
+    <div className="im-card p-3 p-sm-4 rounded-4 h-100 d-flex flex-column justify-content-between">
       <div className="d-flex align-items-center justify-content-between mb-3">
         <span className="text-secondary small fw-bold text-uppercase" style={{ letterSpacing: '0.5px' }}>
           {title}

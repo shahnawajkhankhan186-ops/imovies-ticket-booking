@@ -36,11 +36,11 @@ export default function AdminPaymentsPage() {
     <div>
       <div className="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
         <div>
-          <h2 className="fw-bold m-0">Financial Transactions & Settlements</h2>
+          <h2 className="fw-bold m-0 fs-3 fs-sm-2">Financial Transactions & Settlements</h2>
           <p className="text-secondary small m-0">Payment gateway capture audit trail and automated refund logs.</p>
         </div>
 
-        <div className="btn-group im-glass p-1 rounded-3">
+        <div className="btn-group im-glass p-1 rounded-3 w-100 w-sm-auto">
           <button
             onClick={() => setActiveTab('PAYMENTS')}
             className={`btn btn-sm ${activeTab === 'PAYMENTS' ? 'btn-primary' : 'btn-link text-secondary text-decoration-none'}`}
@@ -56,7 +56,7 @@ export default function AdminPaymentsPage() {
         </div>
       </div>
 
-      <div className="im-glass p-4 rounded-4">
+      <div className="im-glass p-3 p-sm-4 rounded-4">
         {loading ? (
           <div className="text-center py-5">
             <LoadingSpinner message="Auditing ledger transactions..." />
@@ -65,8 +65,8 @@ export default function AdminPaymentsPage() {
           payments.length === 0 ? (
             <div className="text-center py-5 text-secondary">No payment captures found.</div>
           ) : (
-            <div className="table-responsive">
-              <table className="table table-dark table-hover align-middle mb-0" style={{ background: 'transparent' }}>
+            <div className="table-responsive touch-scroll">
+              <table className="table table-dark table-hover align-middle mb-0 text-nowrap" style={{ background: 'transparent' }}>
                 <thead>
                   <tr className="text-secondary small text-uppercase">
                     <th>Razorpay Payment ID</th>
@@ -117,8 +117,8 @@ export default function AdminPaymentsPage() {
         ) : refunds.length === 0 ? (
           <div className="text-center py-5 text-secondary">No refund transactions recorded.</div>
         ) : (
-          <div className="table-responsive">
-            <table className="table table-dark table-hover align-middle mb-0" style={{ background: 'transparent' }}>
+          <div className="table-responsive touch-scroll">
+            <table className="table table-dark table-hover align-middle mb-0 text-nowrap" style={{ background: 'transparent' }}>
               <thead>
                 <tr className="text-secondary small text-uppercase">
                   <th>Refund Reference</th>

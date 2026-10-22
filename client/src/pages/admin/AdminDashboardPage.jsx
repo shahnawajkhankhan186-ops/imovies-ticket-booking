@@ -87,16 +87,16 @@ export default function AdminDashboardPage() {
       {/* Top Header & Quick Actions */}
       <div className="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
         <div>
-          <h2 className="fw-bold m-0">Admin Control Center</h2>
+          <h2 className="fw-bold m-0 fs-3 fs-sm-2">Admin Control Center</h2>
           <p className="text-secondary small m-0">System performance, financial aggregates, and gate operations.</p>
         </div>
 
-        <div className="d-flex gap-2">
-          <Link to="/admin/verify-ticket" className="btn btn-outline-danger btn-sm d-flex align-items-center gap-2">
+        <div className="d-flex flex-wrap gap-2 w-100 w-sm-auto">
+          <Link to="/admin/verify-ticket" className="btn btn-outline-danger btn-sm d-flex align-items-center justify-content-center gap-2 flex-grow-1 flex-sm-grow-0">
             <ScanLine size={16} />
             <span>Verify Ticket</span>
           </Link>
-          <Link to="/admin/shows" className="btn btn-primary btn-sm d-flex align-items-center gap-2">
+          <Link to="/admin/shows" className="btn btn-primary btn-sm d-flex align-items-center justify-content-center gap-2 flex-grow-1 flex-sm-grow-0">
             <PlusCircle size={16} />
             <span>Schedule Show</span>
           </Link>
@@ -147,29 +147,29 @@ export default function AdminDashboardPage() {
       </div>
 
       {stats.pendingRefundsCount > 0 && (
-        <div className="alert alert-warning p-3 rounded-4 mb-4 d-flex align-items-center justify-content-between">
+        <div className="alert alert-warning p-3 rounded-4 mb-4 d-flex flex-wrap align-items-center justify-content-between gap-2">
           <div className="d-flex align-items-center gap-2">
-            <AlertCircle size={20} className="text-warning" />
+            <AlertCircle size={20} className="text-warning flex-shrink-0" />
             <span>
               There are <strong>{stats.pendingRefundsCount}</strong> pending refunds requiring review.
             </span>
           </div>
-          <Link to="/admin/payments" className="btn btn-warning btn-sm">
+          <Link to="/admin/payments" className="btn btn-warning btn-sm w-100 w-sm-auto text-center">
             Review Refunds
           </Link>
         </div>
       )}
 
       {/* Charts Row */}
-      <div className="row g-4 mb-4">
+      <div className="row g-3 g-sm-4 mb-4">
         {/* Weekly Revenue Trend */}
         <div className="col-12 col-lg-7">
-          <div className="im-glass p-4 rounded-4 h-100">
-            <div className="d-flex align-items-center justify-content-between mb-4">
-              <h5 className="fw-bold m-0">Weekly Revenue Trend (₹)</h5>
+          <div className="im-glass p-3 p-sm-4 rounded-4 h-100">
+            <div className="d-flex align-items-center justify-content-between mb-3 mb-sm-4">
+              <h5 className="fw-bold m-0 fs-6 fs-sm-5">Weekly Revenue Trend (₹)</h5>
               <span className="badge bg-danger bg-opacity-25 text-danger small">Last 7 Days</span>
             </div>
-            <div style={{ width: '100%', height: 260 }}>
+            <div style={{ width: '100%', height: 230 }}>
               <ResponsiveContainer>
                 <AreaChart data={trendData}>
                   <defs>
@@ -179,8 +179,8 @@ export default function AdminDashboardPage() {
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="#242c44" />
-                  <XAxis dataKey="day" stroke="#9ca3af" fontSize={12} />
-                  <YAxis stroke="#9ca3af" fontSize={12} />
+                  <XAxis dataKey="day" stroke="#9ca3af" fontSize={11} />
+                  <YAxis stroke="#9ca3af" fontSize={11} />
                   <Tooltip
                     contentStyle={{ background: '#121624', border: '1px solid #242c44', borderRadius: '8px' }}
                   />
@@ -193,19 +193,19 @@ export default function AdminDashboardPage() {
 
         {/* Top Movies by Revenue */}
         <div className="col-12 col-lg-5">
-          <div className="im-glass p-4 rounded-4 h-100">
-            <div className="d-flex align-items-center justify-content-between mb-4">
-              <h5 className="fw-bold m-0">Top Performing Movies</h5>
+          <div className="im-glass p-3 p-sm-4 rounded-4 h-100">
+            <div className="d-flex align-items-center justify-content-between mb-3 mb-sm-4">
+              <h5 className="fw-bold m-0 fs-6 fs-sm-5">Top Performing Movies</h5>
               <BarChart2 size={18} className="text-secondary" />
             </div>
 
             {topMoviesData.length > 0 ? (
-              <div style={{ width: '100%', height: 260 }}>
+              <div style={{ width: '100%', height: 230 }}>
                 <ResponsiveContainer>
                   <BarChart data={topMoviesData}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#242c44" />
-                    <XAxis dataKey="name" stroke="#9ca3af" fontSize={11} />
-                    <YAxis stroke="#9ca3af" fontSize={12} />
+                    <XAxis dataKey="name" stroke="#9ca3af" fontSize={10} />
+                    <YAxis stroke="#9ca3af" fontSize={11} />
                     <Tooltip
                       contentStyle={{ background: '#121624', border: '1px solid #242c44', borderRadius: '8px' }}
                     />
@@ -223,14 +223,14 @@ export default function AdminDashboardPage() {
       </div>
 
       {/* Top Movies List Card */}
-      <div className="im-glass p-4 rounded-4">
-        <h5 className="fw-bold mb-3 d-flex align-items-center gap-2">
+      <div className="im-glass p-3 p-sm-4 rounded-4">
+        <h5 className="fw-bold mb-3 d-flex align-items-center gap-2 fs-6 fs-sm-5">
           <Film size={20} className="text-danger" />
           <span>Top Grossing Movies</span>
         </h5>
 
-        <div className="table-responsive">
-          <table className="table table-dark table-hover align-middle mb-0" style={{ background: 'transparent' }}>
+        <div className="table-responsive touch-scroll">
+          <table className="table table-dark table-hover align-middle mb-0 text-nowrap" style={{ background: 'transparent' }}>
             <thead>
               <tr className="text-secondary small text-uppercase">
                 <th>Movie</th>
