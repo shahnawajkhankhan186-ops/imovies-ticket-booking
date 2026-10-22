@@ -5,7 +5,7 @@ import api from '../../lib/api';
 import Input from '../../components/ui/Input';
 import Button from '../../components/ui/Button';
 import AlertBanner from '../../components/ui/AlertBanner';
-import { Film, CheckCircle2, Mail, ShieldCheck } from 'lucide-react';
+import { Film, CheckCircle2, Mail } from 'lucide-react';
 import toast from 'react-hot-toast';
 import GoogleSignInButton from '../../components/auth/GoogleSignInButton';
 

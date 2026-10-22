@@ -4,7 +4,7 @@ import api from '../../lib/api';
 import Input from '../../components/ui/Input';
 import Button from '../../components/ui/Button';
 import AlertBanner from '../../components/ui/AlertBanner';
-import { Film, Mail, KeyRound, ArrowLeft, RefreshCw } from 'lucide-react';
+import { Film, RefreshCw } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export default function ForgotPasswordPage() {

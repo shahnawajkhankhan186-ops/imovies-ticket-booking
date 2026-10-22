@@ -272,7 +272,7 @@ export default function TicketPage() {
                 <div className="text-secondary small mb-2">Simulated Phone SMS Delivery</div>
                 <div className="p-3 rounded-4 small text-light shadow-sm" style={{ background: '#1c2438', maxWidth: '340px', borderLeft: '3px solid #00d26a' }}>
                   <div className="fw-bold text-success mb-1" style={{ fontSize: '11px' }}>IMOVIES-TICKETS &bull; Just Now</div>
-                  IMOVIES: Your booking <strong>{booking.bookingCode}</strong> for "{booking.showId?.movieId?.title}" ({booking.seats.map((s) => s.seatLabel).join(', ')}) at {booking.showTimeSnapshot} is CONFIRMED! Enjoy your show.
+                  IMOVIES: Your booking <strong>{booking.bookingCode}</strong> for &ldquo;{booking.showId?.movieId?.title}&rdquo; ({booking.seats.map((s) => s.seatLabel).join(', ')}) at {booking.showTimeSnapshot} is CONFIRMED! Enjoy your show.
                 </div>
               </div>
             )}
