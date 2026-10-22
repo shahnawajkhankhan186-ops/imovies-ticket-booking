@@ -53,3 +53,14 @@ export async function sendBookingReminderSMS({ phone, bookingCode, movieTitle, s
   const message = `IMOVIES REMINDER: Your movie "${movieTitle}" starts soon at ${showTime}! Ticket: ${bookingCode}.`;
   console.log(`[SMS REMINDER] Dispatched to ${phone}: ${message}`);
 }
+
+export async function sendPasswordResetSMS({ phone, otp }) {
+  if (!phone) return;
+  const message = `IMOVIES SECURITY: Your password reset verification code is ${otp}. Valid for 60 minutes. Do not share.`;
+  console.log(`[SMS OTP GATEWAY]
+==============================================
+To: ${phone}
+Text: ${message}
+Status: DELIVERED (Instant)
+==============================================`);
+}

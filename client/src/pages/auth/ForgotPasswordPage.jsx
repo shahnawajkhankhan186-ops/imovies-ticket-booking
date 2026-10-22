@@ -27,14 +27,14 @@ export default function ForgotPasswordPage() {
 
     try {
       const res = await api.post('/auth/forgot-password', { email });
-      setInfo(res.data.message || 'Reset instructions generated.');
-      if (res.data.resetToken) {
-        setResetToken(res.data.resetToken);
+      setInfo(res.data.message || 'A 6-digit verification OTP has been dispatched.');
+      if (res.data.otp || res.data.resetToken) {
+        setResetToken(res.data.otp || res.data.resetToken);
       }
       setStep(2);
-      toast.success('Password reset token generated!');
+      toast.success(res.data.otp ? `OTP Sent! Verification code: ${res.data.otp}` : 'OTP Sent successfully!');
     } catch (err) {
-      setError(err.message || 'Failed to request reset token');
+      setError(err.message || 'Failed to request OTP');
     } finally {
       setLoading(false);
     }
@@ -56,6 +56,7 @@ export default function ForgotPasswordPage() {
 
     try {
       await api.post('/auth/reset-password', {
+        otp: resetToken,
         token: resetToken,
         newPassword,
       });
@@ -109,14 +110,14 @@ export default function ForgotPasswordPage() {
             />
 
             <Button type="submit" variant="primary" size="lg" loading={loading} className="w-100 mt-2">
-              Generate Reset Token
+              Send 6-Digit Verification OTP
             </Button>
           </form>
         ) : (
           <form onSubmit={handleResetPassword} className="d-flex flex-column gap-3">
             <Input
-              label="Reset Token"
-              placeholder="Enter recovery token"
+              label="6-Digit Verification OTP"
+              placeholder="Enter 6-digit OTP"
               value={resetToken}
               onChange={(e) => setResetToken(e.target.value)}
               required
