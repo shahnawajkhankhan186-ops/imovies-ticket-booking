@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "IMovies — Movie ticket booking made simple.",
   "scripts": {
+    "install:all": "npm install && npm --prefix server install && npm --prefix client install",
     "dev": "concurrently -k -p \"[{name}]\" -n \"SERVER,CLIENT\" -c \"cyan.bold,magenta.bold\" \"npm run dev:server\" \"npm run dev:client\"",
     "dev:server": "npm --prefix server run dev",
     "dev:client": "npm --prefix client run dev",
