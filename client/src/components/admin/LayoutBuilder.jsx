@@ -112,8 +112,8 @@ export default function LayoutBuilder({ initialLayout, onSave, loading = false }
   return (
     <div className="layout-builder d-flex flex-column gap-3">
       {/* Controls Bar */}
-      <div className="p-3 rounded-3 bg-dark border border-secondary d-flex flex-wrap align-items-center justify-content-between gap-3">
-        <div className="d-flex align-items-center gap-3">
+      <div className="p-3 rounded-3 bg-dark border border-secondary d-flex flex-wrap align-items-center justify-content-between gap-2 gap-sm-3">
+        <div className="d-flex flex-wrap align-items-center gap-2 gap-sm-3">
           <div className="d-flex align-items-center gap-2">
             <label className="text-secondary small fw-bold">Rows:</label>
             <input
@@ -123,11 +123,11 @@ export default function LayoutBuilder({ initialLayout, onSave, loading = false }
               value={rows}
               onChange={(e) => handleResize(parseInt(e.target.value, 10) || 1, cols)}
               className="form-control form-control-sm bg-dark text-light border-secondary"
-              style={{ width: '65px' }}
+              style={{ width: '60px' }}
             />
           </div>
           <div className="d-flex align-items-center gap-2">
-            <label className="text-secondary small fw-bold">Columns:</label>
+            <label className="text-secondary small fw-bold">Cols:</label>
             <input
               type="number"
               min="1"
@@ -135,17 +135,17 @@ export default function LayoutBuilder({ initialLayout, onSave, loading = false }
               value={cols}
               onChange={(e) => handleResize(rows, parseInt(e.target.value, 10) || 1)}
               className="form-control form-control-sm bg-dark text-light border-secondary"
-              style={{ width: '65px' }}
+              style={{ width: '60px' }}
             />
           </div>
-          <div className="badge bg-secondary bg-opacity-50 text-light py-2 px-3">
+          <div className="badge bg-secondary bg-opacity-50 text-light py-1.5 px-2.5">
             Total Seats: <strong className="text-white">{totalSeats}</strong>
           </div>
         </div>
 
         {/* Tools Palette */}
-        <div className="d-flex flex-wrap align-items-center gap-2">
-          <span className="small text-secondary fw-semibold">Click Mode:</span>
+        <div className="d-flex flex-wrap align-items-center gap-1.5 gap-sm-2">
+          <span className="small text-secondary fw-semibold d-none d-sm-inline">Click Mode:</span>
           <button
             type="button"
             onClick={() => setSelectedTool('REGULAR')}
@@ -201,6 +201,9 @@ export default function LayoutBuilder({ initialLayout, onSave, loading = false }
       </div>
 
       {/* Interactive Grid */}
+      <div className="d-md-none text-secondary small text-center mb-1" style={{ fontSize: '11px' }}>
+        👈 Swipe horizontally to view/edit seats 👉
+      </div>
       <div className="p-2 p-sm-3 rounded-4 bg-dark border border-secondary overflow-x-auto touch-scroll text-center" style={{ WebkitOverflowScrolling: 'touch' }}>
         <div className="d-inline-flex flex-column align-items-center" style={{ minWidth: 'max-content', margin: '0 auto' }}>
           {Array.from({ length: rows }, (_, rIdx) => {

@@ -115,7 +115,7 @@ export default function HomePage() {
               <span className="badge bg-danger px-2.5 py-1 text-uppercase fw-bold mb-2" style={{ fontSize: '11px' }}>
                 Featured Spotlight
               </span>
-              <h1 className="display-6 display-md-4 fw-extrabold text-white mb-2">{heroMovie.title}</h1>
+              <h1 className="hero-fluid-title fw-extrabold text-white mb-2">{heroMovie.title}</h1>
               <div className="d-flex flex-wrap align-items-center gap-2 gap-sm-3 text-secondary small mb-3">
                 <span className="badge bg-dark border border-secondary">{heroMovie.certificate}</span>
                 <span>{heroMovie.languages?.join(', ')}</span>
@@ -282,7 +282,7 @@ export default function HomePage() {
             }
           />
         ) : (
-          <div className="row row-cols-2 row-cols-md-3 row-cols-lg-4 g-2 g-sm-3 g-md-4">
+          <div className="row row-cols-2 row-cols-sm-3 row-cols-md-3 row-cols-lg-4 row-cols-xl-5 row-cols-xxl-6 g-2 g-sm-3 g-md-4">
             {movies.map((movie) => (
               <div key={movie._id} className="col">
                 <MovieCard

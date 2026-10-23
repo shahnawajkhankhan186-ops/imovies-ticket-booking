@@ -11,7 +11,16 @@ export default function SeatCell({
 }) {
   // If this cell is an aisle, render an empty spacer preserving grid column width
   if (cell.kind === 'AISLE') {
-    return <div style={{ width: '34px', height: '34px', margin: '3px' }} aria-hidden="true" />;
+    return (
+      <div
+        style={{
+          width: 'var(--seat-size, 34px)',
+          height: 'var(--seat-size, 34px)',
+          margin: 'var(--seat-gap, 3px)',
+        }}
+        aria-hidden="true"
+      />
+    );
   }
 
   const label = cell.label;
@@ -83,18 +92,19 @@ export default function SeatCell({
       title={showDetails && occupantText ? `${ariaDescription} | ${occupantText}` : ariaDescription}
       className={tileClass}
       style={{
-        width: '34px',
-        height: '34px',
-        margin: '3px',
-        fontSize: '11px',
+        width: 'var(--seat-size, 34px)',
+        height: 'var(--seat-size, 34px)',
+        margin: 'var(--seat-gap, 3px)',
+        fontSize: 'var(--seat-font-size, 11px)',
         fontWeight: '600',
-        borderRadius: '6px',
+        borderRadius: 'var(--seat-radius, 6px)',
         backgroundColor,
         border: `1.5px solid ${borderColor}`,
         color: textColor,
         cursor,
         transition: 'all 0.15s ease',
         boxShadow: isSelected ? '0 0 10px var(--seat-selected-glow)' : 'none',
+        flexShrink: 0,
       }}
     >
       {isBlocked ? '✕' : label.replace(/^[A-Z]+/, '')}

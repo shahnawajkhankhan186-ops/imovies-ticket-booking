@@ -47,18 +47,18 @@ export default function Navbar() {
     <nav className="navbar navbar-expand-lg navbar-dark im-glass sticky-top py-2 py-lg-3 border-bottom border-secondary border-opacity-25">
       <div className="container">
         {/* Brand & City Wrapper */}
-        <div className="d-flex align-items-center">
-          <Link to={user ? "/movies" : "/"} className="navbar-brand d-flex align-items-center gap-2 fw-bold fs-4 m-0 py-0">
-            <Film size={26} className="text-danger flex-shrink-0" />
+        <div className="d-flex align-items-center flex-wrap gap-1 gap-sm-2 flex-grow-1 flex-lg-grow-0 me-2">
+          <Link to={user ? "/movies" : "/"} className="navbar-brand d-flex align-items-center gap-1.5 gap-sm-2 fw-bold fs-4 m-0 py-0 text-decoration-none">
+            <Film size={24} className="text-danger flex-shrink-0" />
             <span className="text-light" style={{ letterSpacing: '1px' }}>
               IMOVIES
             </span>
           </Link>
 
           {/* City Selector */}
-          <div className="dropdown ms-2 ms-sm-3 position-relative" ref={cityDropdownRef}>
+          <div className="dropdown position-relative ms-1 ms-sm-2" ref={cityDropdownRef}>
             <button
-              className="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1.5 rounded-pill px-2.5 px-sm-3 py-1 dropdown-toggle text-light"
+              className="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1.5 rounded-pill px-2 px-sm-3 py-1 dropdown-toggle text-light"
               type="button"
               onClick={() => {
                 setCityDropdownOpen(!cityDropdownOpen);
@@ -68,7 +68,7 @@ export default function Navbar() {
               style={{ fontSize: '0.8rem' }}
             >
               <MapPin size={13} className="text-danger flex-shrink-0" />
-              <span className="text-truncate" style={{ maxWidth: '85px' }}>{city}</span>
+              <span className="text-truncate" style={{ maxWidth: 'clamp(65px, 18vw, 120px)' }}>{city}</span>
             </button>
             <ul
               className={`dropdown-menu dropdown-menu-dark shadow ${cityDropdownOpen ? 'show' : ''}`}
@@ -102,7 +102,7 @@ export default function Navbar() {
 
         {/* Hamburger Toggle */}
         <button
-          className="navbar-toggler border-0 p-1"
+          className="navbar-toggler border-0 p-1 ms-auto"
           type="button"
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
           aria-controls="navbarContent"
