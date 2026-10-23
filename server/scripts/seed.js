@@ -32,12 +32,14 @@ function generateScreenLayout(numRows, numCols, aisleCols = [4, 9], blockedSeats
 
   for (let r = 0; r < numRows; r++) {
     const rowChar = rowLetters[r];
-    // Assign category based on row depth
+    // Assign category based on row depth: first section REGULAR, second PREMIUM, last RECLINER
     let category = SEAT_CATEGORIES.REGULAR;
     if (r < 2) {
-      category = SEAT_CATEGORIES.RECLINER; // front/top rows
+      category = SEAT_CATEGORIES.REGULAR; // first section: regular (closest to screen)
     } else if (r < Math.ceil(numRows * 0.6)) {
-      category = SEAT_CATEGORIES.PREMIUM;
+      category = SEAT_CATEGORIES.PREMIUM; // second section: premium
+    } else {
+      category = SEAT_CATEGORIES.RECLINER; // last section: recliner (back of hall)
     }
 
     for (let c = 1; c <= numCols; c++) {

@@ -84,7 +84,7 @@ export default function AdminScreensPage() {
         let totalSeatsCount = 0;
         for (let r = 1; r <= 8; r++) {
           const rowChar = rowLetters[r - 1] || `R${r}`;
-          const category = r <= 2 ? 'RECLINER' : r <= 5 ? 'PREMIUM' : 'REGULAR';
+          const category = r <= 2 ? 'REGULAR' : r <= 5 ? 'PREMIUM' : 'RECLINER';
           for (let c = 1; c <= 12; c++) {
             if (c === 4 || c === 9) {
               defaultCells.push({ row: r, col: c, label: '', category: 'NONE', kind: 'AISLE' });
@@ -102,9 +102,9 @@ export default function AdminScreensPage() {
           totalSeats: totalSeatsCount,
           layout: { rows: 8, cols: 12, cells: defaultCells },
           categoryConfig: [
-            { category: 'RECLINER', defaultPricePaise: 40000 },
-            { category: 'PREMIUM', defaultPricePaise: 30000 },
             { category: 'REGULAR', defaultPricePaise: 20000 },
+            { category: 'PREMIUM', defaultPricePaise: 30000 },
+            { category: 'RECLINER', defaultPricePaise: 40000 },
           ],
         });
         toast.success('Screen created successfully! You can now customize its seat layout.');
