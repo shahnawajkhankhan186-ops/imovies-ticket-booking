@@ -34,8 +34,15 @@ const settingSchema = new mongoose.Schema(
   }
 );
 
-// Singleton helper: get or create settings
-settingSchema.statics.getSettings = async function () {
+let cachedSettings = null;
+let cacheExpiresAt = 0;
+
+// Singleton helper: get or create settings with fast in-memory caching
+settingSchema.statics.getSettings = async function (forceFresh = false) {
+  const now = Date.now();
+  if (!forceFresh && cachedSettings && now < cacheExpiresAt) {
+    return cachedSettings;
+  }
   let settings = await this.findOne();
   if (!settings) {
     settings = await this.create({
@@ -51,7 +58,14 @@ settingSchema.statics.getSettings = async function () {
       },
     });
   }
+  cachedSettings = settings;
+  cacheExpiresAt = now + 60 * 1000; // 60 seconds TTL
   return settings;
+};
+
+settingSchema.statics.clearCache = function () {
+  cachedSettings = null;
+  cacheExpiresAt = 0;
 };
 
 export const Setting = mongoose.model('Setting', settingSchema);

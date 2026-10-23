@@ -76,6 +76,11 @@ const movieSchema = new mongoose.Schema(
   }
 );
 
+// Fast query & sorting indexes
+movieSchema.index({ status: 1, releaseDate: -1, createdAt: -1 });
+movieSchema.index({ status: 1, languages: 1 });
+movieSchema.index({ status: 1, genres: 1 });
+
 // Search index on title, director and cast
 movieSchema.index({ title: 'text', synopsis: 'text', director: 'text' });
 
