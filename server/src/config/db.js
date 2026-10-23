@@ -5,6 +5,11 @@ export async function connectDB() {
   try {
     const conn = await mongoose.connect(env.MONGODB_URI, {
       autoIndex: true,
+      maxPoolSize: 50,
+      minPoolSize: 10,
+      serverSelectionTimeoutMS: 5000,
+      socketTimeoutMS: 45000,
+      family: 4,
     });
 
     const host = conn.connection.host;

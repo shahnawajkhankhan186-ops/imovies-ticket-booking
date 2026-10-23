@@ -39,5 +39,6 @@ const reviewSchema = new mongoose.Schema(
 
 // One review per user per movie
 reviewSchema.index({ userId: 1, movieId: 1 }, { unique: true });
+reviewSchema.index({ movieId: 1, createdAt: -1 });
 
 export const Review = mongoose.model('Review', reviewSchema);

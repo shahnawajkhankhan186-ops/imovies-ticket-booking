@@ -11,6 +11,10 @@ async function ensureDatabase() {
   }
   await mongoose.connect(env.MONGODB_URI, {
     autoIndex: false,
+    maxPoolSize: 10,
+    serverSelectionTimeoutMS: 5000,
+    socketTimeoutMS: 30000,
+    family: 4,
   });
   isConnected = true;
 }

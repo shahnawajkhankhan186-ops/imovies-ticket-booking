@@ -1,5 +1,4 @@
 import nodemailer from 'nodemailer';
-import { env } from '../config/env.js';
 import { generateTicketPDFBuffer } from './pdfTicket.js';
 
 let transporter = null;

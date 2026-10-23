@@ -1,50 +1,66 @@
-import React from 'react';
+import React, { lazy, Suspense } from 'react';
 import { Routes, Route } from 'react-router-dom';
 
-// Public Pages
+// Eagerly import primary public home & landing for instant first-paint
 import HomePage from '../pages/public/HomePage';
 import LandingPage from '../pages/public/LandingPage';
-import MovieDetailPage from '../pages/public/MovieDetailPage';
-import ShowSelectionPage from '../pages/public/ShowSelectionPage';
-import SeatSelectionPage from '../pages/public/SeatSelectionPage';
-import NotFoundPage from '../pages/public/NotFoundPage';
 
-// Auth Pages
-import LoginPage from '../pages/auth/LoginPage';
-import RegisterPage from '../pages/auth/RegisterPage';
-import ForgotPasswordPage from '../pages/auth/ForgotPasswordPage';
+// Lazy-load secondary public pages
+const MovieDetailPage = lazy(() => import('../pages/public/MovieDetailPage'));
+const ShowSelectionPage = lazy(() => import('../pages/public/ShowSelectionPage'));
+const SeatSelectionPage = lazy(() => import('../pages/public/SeatSelectionPage'));
+const NotFoundPage = lazy(() => import('../pages/public/NotFoundPage'));
 
-// User Pages
-import CheckoutPage from '../pages/user/CheckoutPage';
-import TicketPage from '../pages/user/TicketPage';
-import MyBookingsPage from '../pages/user/MyBookingsPage';
-import ProfilePage from '../pages/user/ProfilePage';
-import FavoritesPage from '../pages/user/FavoritesPage';
+// Lazy-load Auth pages
+const LoginPage = lazy(() => import('../pages/auth/LoginPage'));
+const RegisterPage = lazy(() => import('../pages/auth/RegisterPage'));
+const ForgotPasswordPage = lazy(() => import('../pages/auth/ForgotPasswordPage'));
 
-// Admin Portal Pages
-import AdminLayout from '../pages/admin/AdminLayout';
-import AdminDashboardPage from '../pages/admin/AdminDashboardPage';
-import AdminMoviesPage from '../pages/admin/AdminMoviesPage';
-import AdminReviewsPage from '../pages/admin/AdminReviewsPage';
-import AdminTheatresPage from '../pages/admin/AdminTheatresPage';
-import AdminScreensPage from '../pages/admin/AdminScreensPage';
-import AdminShowsPage from '../pages/admin/AdminShowsPage';
-import AdminBookingsPage from '../pages/admin/AdminBookingsPage';
-import AdminVerifyTicketPage from '../pages/admin/AdminVerifyTicketPage';
-import AdminPaymentsPage from '../pages/admin/AdminPaymentsPage';
-import AdminUsersPage from '../pages/admin/AdminUsersPage';
-import AdminCouponsPage from '../pages/admin/AdminCouponsPage';
-import AdminReportsPage from '../pages/admin/AdminReportsPage';
-import AdminAuditLogsPage from '../pages/admin/AdminAuditLogsPage';
-import AdminSettingsPage from '../pages/admin/AdminSettingsPage';
+// Lazy-load User pages
+const CheckoutPage = lazy(() => import('../pages/user/CheckoutPage'));
+const TicketPage = lazy(() => import('../pages/user/TicketPage'));
+const MyBookingsPage = lazy(() => import('../pages/user/MyBookingsPage'));
+const ProfilePage = lazy(() => import('../pages/user/ProfilePage'));
+const FavoritesPage = lazy(() => import('../pages/user/FavoritesPage'));
+
+// Lazy-load heavy Admin Portal pages (contains Recharts, BI reports, etc.)
+const AdminLayout = lazy(() => import('../pages/admin/AdminLayout'));
+const AdminDashboardPage = lazy(() => import('../pages/admin/AdminDashboardPage'));
+const AdminMoviesPage = lazy(() => import('../pages/admin/AdminMoviesPage'));
+const AdminReviewsPage = lazy(() => import('../pages/admin/AdminReviewsPage'));
+const AdminTheatresPage = lazy(() => import('../pages/admin/AdminTheatresPage'));
+const AdminScreensPage = lazy(() => import('../pages/admin/AdminScreensPage'));
+const AdminShowsPage = lazy(() => import('../pages/admin/AdminShowsPage'));
+const AdminBookingsPage = lazy(() => import('../pages/admin/AdminBookingsPage'));
+const AdminVerifyTicketPage = lazy(() => import('../pages/admin/AdminVerifyTicketPage'));
+const AdminPaymentsPage = lazy(() => import('../pages/admin/AdminPaymentsPage'));
+const AdminUsersPage = lazy(() => import('../pages/admin/AdminUsersPage'));
+const AdminCouponsPage = lazy(() => import('../pages/admin/AdminCouponsPage'));
+const AdminReportsPage = lazy(() => import('../pages/admin/AdminReportsPage'));
+const AdminAuditLogsPage = lazy(() => import('../pages/admin/AdminAuditLogsPage'));
+const AdminSettingsPage = lazy(() => import('../pages/admin/AdminSettingsPage'));
 
 // Guards
 import ProtectedRoute from './ProtectedRoute';
 import AdminRoute from './AdminRoute';
 
+function PageFallback() {
+  return (
+    <div className="d-flex flex-column align-items-center justify-content-center py-5 my-5" style={{ minHeight: '40vh' }}>
+      <div className="spinner-border text-danger" role="status" style={{ width: '2.5rem', height: '2.5rem' }}>
+        <span className="visually-hidden">Loading...</span>
+      </div>
+      <p className="text-secondary mt-3 fs-6" style={{ letterSpacing: '0.5px' }}>
+        Loading IMovies...
+      </p>
+    </div>
+  );
+}
+
 export default function AppRoutes() {
   return (
-    <Routes>
+    <Suspense fallback={<PageFallback />}>
+      <Routes>
       {/* Public Landing Entrance */}
       <Route path="/" element={<LandingPage />} />
       <Route path="/landing" element={<LandingPage />} />
@@ -224,5 +240,6 @@ export default function AppRoutes() {
       {/* 404 Catch-All */}
       <Route path="*" element={<NotFoundPage />} />
     </Routes>
+  </Suspense>
   );
 }

@@ -62,5 +62,6 @@ const showSchema = new mongoose.Schema(
 showSchema.index({ screenId: 1, startTime: 1, endTime: 1 });
 showSchema.index({ movieId: 1, startTime: 1, status: 1 });
 showSchema.index({ theatreId: 1, startTime: 1, status: 1 });
+showSchema.index({ movieId: 1, theatreId: 1, status: 1, startTime: 1 });
 
 export const Show = mongoose.model('Show', showSchema);

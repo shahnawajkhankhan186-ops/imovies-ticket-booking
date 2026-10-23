@@ -17,8 +17,6 @@ import {
   BOOKING_STATUS,
   SEAT_STATUS,
   SHOW_STATUS,
-  MOVIE_STATUS,
-  FORMATS,
   AUDIT_ENTITIES,
   CELL_KIND,
   ROLES,
@@ -32,12 +30,14 @@ import {
   generateRevenueReportCSV,
   generateOccupancyReportCSV,
 } from '../services/report.service.js';
-import { getISTDayRange, formatISTDateOnly, createISTInstant } from '../utils/ist-date.js';
+import { getISTDayRange, formatISTDateOnly } from '../utils/ist-date.js';
 import { cleanupExpiredHolds } from '../jobs/expireHolds.js';
+import { apiCache } from '../utils/cache.js';
 
 // Helper to log admin actions inside audit trail
 async function logAudit(actor, action, entity, entityId, beforeSnapshot, afterSnapshot, ip) {
   try {
+    apiCache.clear();
     await AuditLog.create({
       actorId: actor._id,
       actorName: actor.name,
@@ -1075,6 +1075,7 @@ export async function updateAdminSettings(req, res, next) {
   try {
     const before = await Setting.getSettings();
     const after = await Setting.findOneAndUpdate({}, { $set: req.body }, { new: true, runValidators: true });
+    Setting.clearCache();
 
     await logAudit(req.user, 'UPDATE', AUDIT_ENTITIES.SETTING, after._id, before.toObject(), after.toObject(), req.ip);
     return res.status(200).json({ settings: after });

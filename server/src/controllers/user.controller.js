@@ -20,6 +20,7 @@ import { emitToShowRoom } from '../sockets/seatSocket.js';
 import { sendBookingConfirmationEmail } from '../utils/mailer.js';
 import { sendBookingConfirmationSMS } from '../utils/sms.js';
 import { cleanupExpiredHolds } from '../jobs/expireHolds.js';
+import { apiCache } from '../utils/cache.js';
 
 export const holdSeatsSchema = z.object({
   showId: z.string().min(1, 'Show ID is required'),
@@ -623,6 +624,9 @@ export async function postReview(req, res, next) {
       rating,
       comment: comment.trim(),
     });
+
+    apiCache.del(`movie:${movieId}`);
+    apiCache.delByPrefix('movies:');
 
     return res.status(201).json({
       message: MESSAGES.REVIEW_SUBMITTED_SUCCESS,

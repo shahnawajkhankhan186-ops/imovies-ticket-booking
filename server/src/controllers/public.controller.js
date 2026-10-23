@@ -1,15 +1,24 @@
 import { Movie } from '../models/Movie.js';
 import { Theatre } from '../models/Theatre.js';
 import { Show } from '../models/Show.js';
+import { ShowSeat } from '../models/ShowSeat.js';
 import { Review } from '../models/Review.js';
-import { getShowSeatsWithStatus } from '../services/seatAvailability.service.js';
+import { getShowSeatsWithStatus, resolveSeatStatus } from '../services/seatAvailability.service.js';
 import { getISTDayRange, formatISTDateOnly } from '../utils/ist-date.js';
 import { MOVIE_STATUS, SHOW_STATUS, SEAT_STATUS } from '../constants/enums.js';
 import { MESSAGES } from '../constants/messages.js';
+import { apiCache } from '../utils/cache.js';
 
 export async function getMovies(req, res, next) {
   try {
     const { status, language, genre, q, city, page = 1, limit = 12 } = req.query;
+
+    const cacheKey = `movies:${status || ''}:${language || ''}:${genre || ''}:${q || ''}:${city || ''}:${page}:${limit}`;
+    const cached = apiCache.get(cacheKey);
+    if (cached) {
+      return res.status(200).json(cached);
+    }
+
     const filter = {};
 
     if (status) {
@@ -32,18 +41,19 @@ export async function getMovies(req, res, next) {
 
     // Filter by city: find theatres in this city, then find movies with shows in those theatres
     if (city && city.trim() !== '') {
-      const theatres = await Theatre.find({ city: new RegExp(`^${city.trim()}$`, 'i') }).select('_id');
+      const theatres = await Theatre.find({ city: new RegExp(`^${city.trim()}$`, 'i') }).select('_id').lean();
       const theatreIds = theatres.map((t) => t._id);
-      const activeShows = await Show.find({
-        theatreId: { $in: theatreIds },
-        startTime: { $gte: new Date() },
-        status: SHOW_STATUS.SCHEDULED,
-      }).select('movieId');
 
-      const movieIdsWithShows = [...new Set(activeShows.map((s) => s.movieId.toString()))];
-      
-      // Also include any movies with status NOW_SHOWING so freshly added movies are never hidden!
-      const allNowShowing = await Movie.find({ status: MOVIE_STATUS.NOW_SHOWING }).select('_id');
+      const [activeShows, allNowShowing] = await Promise.all([
+        Show.find({
+          theatreId: { $in: theatreIds },
+          startTime: { $gte: new Date() },
+          status: SHOW_STATUS.SCHEDULED,
+        }).select('movieId').lean(),
+        Movie.find({ status: MOVIE_STATUS.NOW_SHOWING }).select('_id').lean(),
+      ]);
+
+      const movieIdsWithShows = activeShows.map((s) => s.movieId.toString());
       const allNowShowingIds = allNowShowing.map((m) => m._id.toString());
 
       filter._id = { $in: [...new Set([...movieIdsWithShows, ...allNowShowingIds])] };
@@ -85,12 +95,17 @@ export async function getMovies(req, res, next) {
       reviewCount: ratingMap.get(m._id.toString())?.reviewCount || 0,
     }));
 
-    return res.status(200).json({
+    const responsePayload = {
       movies: enrichedMovies,
       total,
       page: pageNum,
       totalPages: Math.ceil(total / limitNum),
-    });
+    };
+
+    // Cache results for 30 seconds
+    apiCache.set(cacheKey, responsePayload, 30);
+
+    return res.status(200).json(responsePayload);
   } catch (error) {
     next(error);
   }
@@ -98,7 +113,14 @@ export async function getMovies(req, res, next) {
 
 export async function getMovieById(req, res, next) {
   try {
-    const movie = await Movie.findById(req.params.id).lean();
+    const { id } = req.params;
+    const cacheKey = `movie:${id}`;
+    const cached = apiCache.get(cacheKey);
+    if (cached) {
+      return res.status(200).json(cached);
+    }
+
+    const movie = await Movie.findById(id).lean();
     if (!movie) {
       return res.status(404).json({
         error: MESSAGES.RESOURCE_NOT_FOUND,
@@ -106,25 +128,26 @@ export async function getMovieById(req, res, next) {
       });
     }
 
-    // Aggregated rating & reviews
-    const reviews = await Review.find({ movieId: movie._id })
-      .populate('userId', 'name')
-      .sort({ createdAt: -1 })
-      .limit(10)
-      .lean();
-
-    const ratingStats = await Review.aggregate([
-      { $match: { movieId: movie._id } },
-      {
-        $group: {
-          _id: null,
-          avgRating: { $avg: '$rating' },
-          reviewCount: { $sum: 1 },
+    // Parallelize reviews and rating aggregation
+    const [reviews, ratingStats] = await Promise.all([
+      Review.find({ movieId: movie._id })
+        .populate('userId', 'name')
+        .sort({ createdAt: -1 })
+        .limit(10)
+        .lean(),
+      Review.aggregate([
+        { $match: { movieId: movie._id } },
+        {
+          $group: {
+            _id: null,
+            avgRating: { $avg: '$rating' },
+            reviewCount: { $sum: 1 },
+          },
         },
-      },
+      ]),
     ]);
 
-    return res.status(200).json({
+    const result = {
       movie: {
         ...movie,
         avgRating: ratingStats[0] ? Number(ratingStats[0].avgRating.toFixed(1)) : null,
@@ -137,7 +160,11 @@ export async function getMovieById(req, res, next) {
           createdAt: r.createdAt,
         })),
       },
-    });
+    };
+
+    apiCache.set(cacheKey, result, 60);
+
+    return res.status(200).json(result);
   } catch (error) {
     next(error);
   }
@@ -148,7 +175,16 @@ export async function getMovieShows(req, res, next) {
     const { id } = req.params;
     const { city, date } = req.query;
 
-    const movie = await Movie.findById(id);
+    // Default to today in IST
+    const targetDateStr = date || formatISTDateOnly(new Date());
+
+    const cacheKey = `shows:${id}:${city || ''}:${targetDateStr}`;
+    const cached = apiCache.get(cacheKey);
+    if (cached) {
+      return res.status(200).json(cached);
+    }
+
+    const movie = await Movie.findById(id).lean();
     if (!movie) {
       return res.status(404).json({
         error: MESSAGES.RESOURCE_NOT_FOUND,
@@ -156,8 +192,6 @@ export async function getMovieShows(req, res, next) {
       });
     }
 
-    // Default to today in IST
-    const targetDateStr = date || formatISTDateOnly(new Date());
     const { startUTC, endUTC } = getISTDayRange(targetDateStr);
 
     const theatreQuery = {};
@@ -191,6 +225,22 @@ export async function getMovieShows(req, res, next) {
       });
     });
 
+    // HIGH SPEED OPTIMIZATION: Batch fetch ALL seats for all shows in 1 single query (replaces N+1 DB loop)
+    const showIds = shows.map((s) => s._id);
+    const allSeats = await ShowSeat.find(
+      { showId: { $in: showIds } },
+      'showId status holdExpiresAt'
+    ).lean();
+
+    const seatsByShowId = new Map();
+    for (const seat of allSeats) {
+      const sId = seat.showId.toString();
+      if (!seatsByShowId.has(sId)) {
+        seatsByShowId.set(sId, []);
+      }
+      seatsByShowId.get(sId).push(seat);
+    }
+
     for (const show of shows) {
       const tKey = show.theatreId.toString();
       if (!theatreMap.has(tKey)) continue;
@@ -205,10 +255,10 @@ export async function getMovieShows(req, res, next) {
         });
       }
 
-      // Check availability indicator
+      // Check availability indicator in-memory instantly using single source of truth
       const totalSeats = show.screenId.totalSeats || 60;
-      const bookedOrHeldSeats = await getShowSeatsWithStatus(show._id);
-      const availableCount = bookedOrHeldSeats.filter((s) => s.status === SEAT_STATUS.AVAILABLE).length;
+      const showSeats = seatsByShowId.get(show._id.toString()) || [];
+      const availableCount = showSeats.filter((s) => resolveSeatStatus(s, now) === SEAT_STATUS.AVAILABLE).length;
 
       let availability = 'AVAILABLE';
       const availableRatio = availableCount / totalSeats;
@@ -254,10 +304,15 @@ export async function getMovieShows(req, res, next) {
       }
     }
 
-    return res.status(200).json({
+    const payload = {
       date: targetDateStr,
       theatres: result,
-    });
+    };
+
+    // Cache showtimes for 15 seconds
+    apiCache.set(cacheKey, payload, 15);
+
+    return res.status(200).json(payload);
   } catch (error) {
     next(error);
   }
@@ -265,10 +320,18 @@ export async function getMovieShows(req, res, next) {
 
 export async function getCities(req, res, next) {
   try {
+    const cached = apiCache.get('public_cities');
+    if (cached) {
+      return res.status(200).json(cached);
+    }
+
     const cities = await Theatre.distinct('city');
-    return res.status(200).json({
+    const payload = {
       cities: cities.sort(),
-    });
+    };
+
+    apiCache.set('public_cities', payload, 300); // 5 minutes TTL
+    return res.status(200).json(payload);
   } catch (error) {
     next(error);
   }

@@ -1,4 +1,5 @@
 import express from 'express';
+import compression from 'compression';
 import helmet from 'helmet';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
@@ -16,8 +17,9 @@ import { MESSAGES } from './constants/messages.js';
 
 const app = express();
 
-// Security Headers
+// Security Headers & Payload Compression
 app.use(helmet());
+app.use(compression());
 
 // CORS configuration
 const allowedOrigins = [
