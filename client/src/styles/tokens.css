@@ -56,7 +56,38 @@
   --glass-border: rgba(255, 255, 255, 0.08);
   --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
 
+  /* Responsive Seat Sizing & Grid Tokens */
+  --seat-size: 34px;
+  --seat-gap: 3px;
+  --seat-font-size: 11px;
+  --seat-radius: 6px;
+
   /* Transitions */
   --transition-fast: 0.15s ease;
   --transition-normal: 0.25s ease;
+}
+
+/* Responsive Adaptive Seat Size Breakpoints */
+@media (max-width: 767.98px) {
+  :root {
+    --seat-size: 30px;
+    --seat-gap: 2.5px;
+    --seat-font-size: 10px;
+  }
+}
+
+@media (max-width: 480px) {
+  :root {
+    --seat-size: 26px;
+    --seat-gap: 2px;
+    --seat-font-size: 9px;
+  }
+}
+
+@media (max-width: 360px) {
+  :root {
+    --seat-size: 22px;
+    --seat-gap: 1.5px;
+    --seat-font-size: 8px;
+  }
 }

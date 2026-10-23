@@ -225,36 +225,36 @@ export default function SeatSelectionPage() {
 
         {/* Sticky Price & Checkout Bar */}
         <div
-          className="im-glass p-3 px-md-4 rounded-4 shadow-lg d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-3 sticky-bottom mb-2 mb-md-3"
+          className="im-glass p-3 px-md-4 rounded-4 shadow-lg d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-2 gap-sm-3 sticky-bottom mb-2 mb-md-3"
           style={{
-            bottom: '0.75rem',
+            bottom: 'calc(0.5rem + env(safe-area-inset-bottom, 0px))',
             border: '1px solid var(--border-subtle)',
             zIndex: 100,
             backdropFilter: 'blur(16px)',
           }}
         >
           <div className="d-flex flex-column">
-            <div className="text-secondary small">
+            <div className="text-secondary small text-truncate" style={{ maxWidth: '100%' }}>
               Selected Seats:{' '}
               <strong className="text-white">
                 {selectedSeatLabels.length > 0 ? selectedSeatLabels.join(', ') : 'None'}
               </strong>
             </div>
-            <div className="fs-5 fw-bold text-light d-flex flex-wrap align-items-baseline gap-1">
+            <div className="fs-5 fw-bold text-light d-flex flex-wrap align-items-baseline gap-1 mt-0.5">
               <span>Preview Total:</span>
               <span className="text-danger fs-4 fw-extrabold">{formatPaise(previewSubtotal)}</span>
               <span className="text-secondary small fw-normal">(+ taxes at checkout)</span>
             </div>
           </div>
 
-          <div className="w-100 w-sm-auto">
+          <div className="w-100 w-sm-auto mt-1 mt-sm-0">
             <Button
               variant="primary"
               size="lg"
               disabled={selectedSeatLabels.length === 0 || submitting}
               loading={submitting}
               onClick={handleProceedToPay}
-              className="w-100 w-sm-auto px-4"
+              className="w-100 w-sm-auto px-4 py-2"
             >
               {user ? 'Proceed to Pay' : 'Sign in & Book'}
             </Button>

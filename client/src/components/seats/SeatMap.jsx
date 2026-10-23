@@ -13,15 +13,26 @@ export default function SeatMap({
   showDetails = false,
   pricing = {},
 }) {
-  const [zoom, setZoom] = useState(1);
+  const [zoom, setZoom] = useState(() => {
+    if (typeof window !== 'undefined' && window.innerWidth < 480) {
+      return 0.85;
+    }
+    return 1;
+  });
 
   if (!layout || !layout.cells || layout.cells.length === 0) {
     return <div className="text-secondary text-center py-5">Screen layout not available.</div>;
   }
 
   const handleZoomIn = () => setZoom((z) => Math.min(1.4, +(z + 0.15).toFixed(2)));
-  const handleZoomOut = () => setZoom((z) => Math.max(0.75, +(z - 0.15).toFixed(2)));
-  const handleZoomReset = () => setZoom(1);
+  const handleZoomOut = () => setZoom((z) => Math.max(0.65, +(z - 0.15).toFixed(2)));
+  const handleZoomReset = () => {
+    if (typeof window !== 'undefined' && window.innerWidth < 480) {
+      setZoom(0.85);
+    } else {
+      setZoom(1);
+    }
+  };
 
   // Create a fast lookup map for seats by seatLabel
   const seatMap = new Map();
@@ -158,8 +169,13 @@ export default function SeatMap({
                 <div className="d-flex align-items-center justify-content-center mb-1">
                   {/* Left Row Label */}
                   <span
-                    className="text-secondary fw-bold me-2 me-sm-3 text-center"
-                    style={{ width: '22px', fontSize: '12px' }}
+                    className="text-secondary fw-bold me-1 me-sm-2 text-center d-flex align-items-center justify-content-center"
+                    style={{
+                      width: 'var(--seat-size, 34px)',
+                      height: 'var(--seat-size, 34px)',
+                      fontSize: 'var(--seat-font-size, 11px)',
+                      flexShrink: 0,
+                    }}
                     aria-hidden="true"
                   >
                     {group.rowChar}
@@ -182,8 +198,13 @@ export default function SeatMap({
 
                   {/* Right Row Label */}
                   <span
-                    className="text-secondary fw-bold ms-2 ms-sm-3 text-center"
-                    style={{ width: '22px', fontSize: '12px' }}
+                    className="text-secondary fw-bold ms-1 ms-sm-2 text-center d-flex align-items-center justify-content-center"
+                    style={{
+                      width: 'var(--seat-size, 34px)',
+                      height: 'var(--seat-size, 34px)',
+                      fontSize: 'var(--seat-font-size, 11px)',
+                      flexShrink: 0,
+                    }}
                     aria-hidden="true"
                   >
                     {group.rowChar}

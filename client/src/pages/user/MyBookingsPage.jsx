@@ -251,7 +251,7 @@ export default function MyBookingsPage() {
                   </div>
 
                   {/* Action Buttons */}
-                  <div className="col-12 col-lg-auto d-flex flex-row flex-lg-column gap-2 mt-2 mt-lg-0 border-top border-lg-0 border-secondary border-opacity-25 pt-2 pt-lg-0">
+                  <div className="col-12 col-lg-auto d-flex flex-column flex-sm-row flex-lg-column gap-2 mt-2 mt-lg-0 border-top border-lg-0 border-secondary border-opacity-25 pt-2 pt-lg-0">
                     {isHold && (
                       <Link
                         to={`/checkout/${b._id}`}

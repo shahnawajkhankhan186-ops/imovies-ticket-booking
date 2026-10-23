@@ -6,6 +6,13 @@
   box-sizing: border-box;
 }
 
+html {
+  overflow-x: hidden;
+  scroll-behavior: smooth;
+  width: 100%;
+  max-width: 100vw;
+}
+
 body {
   margin: 0;
   padding: 0;
@@ -13,6 +20,10 @@ body {
   background-color: var(--bg-main);
   color: var(--text-main);
   min-height: 100vh;
+  width: 100%;
+  max-width: 100vw;
+  overflow-x: hidden;
+  min-width: 320px;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -26,6 +37,39 @@ h1, h2, h3, h4, h5, h6 {
 a {
   color: inherit;
   text-decoration: none;
+}
+
+/* ==========================================================================
+   Fluid Ultrawide & Desktop Scale (> 1400px, > 1600px, > 1920px)
+   ========================================================================== */
+@media (min-width: 1400px) {
+  .container, .container-lg, .container-md, .container-sm, .container-xl, .container-xxl {
+    max-width: 1440px;
+  }
+  .row-cols-xxl-5 > * {
+    flex: 0 0 auto;
+    width: 20%;
+  }
+  .row-cols-xxl-6 > * {
+    flex: 0 0 auto;
+    width: 16.666667%;
+  }
+}
+
+@media (min-width: 1680px) {
+  .container, .container-lg, .container-md, .container-sm, .container-xl, .container-xxl {
+    max-width: 1620px;
+  }
+}
+
+@media (min-width: 1920px) {
+  .container, .container-lg, .container-md, .container-sm, .container-xl, .container-xxl {
+    max-width: 1800px;
+  }
+  .row-cols-xxxl-7 > * {
+    flex: 0 0 auto;
+    width: 14.285714%;
+  }
 }
 
 /* Glassmorphism Surface Container */
@@ -119,17 +163,35 @@ a {
   scroll-behavior: smooth;
 }
 
+/* Fluid Hero & Section Titles */
+.hero-fluid-title {
+  font-size: clamp(1.75rem, 5.5vw, 3.8rem) !important;
+  line-height: 1.15 !important;
+  letter-spacing: -0.02em !important;
+}
+
+.section-fluid-title {
+  font-size: clamp(1.35rem, 3vw, 2.25rem) !important;
+}
+
+/* Responsive Table Wrapper */
+.table-responsive {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
 /* Mobile responsive typography adjustments */
 @media (max-width: 767.98px) {
   h1, .display-4, .display-5 {
-    font-size: calc(1.5rem + 1.2vw) !important;
+    font-size: calc(1.4rem + 1.2vw) !important;
     line-height: 1.2 !important;
   }
   h2 {
-    font-size: calc(1.3rem + 0.8vw) !important;
+    font-size: calc(1.2rem + 0.8vw) !important;
   }
   h3 {
-    font-size: 1.25rem !important;
+    font-size: 1.2rem !important;
   }
 
   /* Compact glass card padding on phones */
@@ -140,12 +202,24 @@ a {
   /* Responsive table padding */
   .table > :not(caption) > * > * {
     padding: 0.6rem 0.5rem;
-    font-size: 0.85rem;
+    font-size: 0.825rem;
   }
 
   /* Safe Area Padding for modern phones */
   .safe-bottom {
     padding-bottom: calc(1rem + env(safe-area-inset-bottom, 0px)) !important;
+  }
+}
+
+/* Extremely Small Phones (< 360px) */
+@media (max-width: 359.98px) {
+  .btn {
+    padding-left: 0.5rem !important;
+    padding-right: 0.5rem !important;
+    font-size: 0.8rem !important;
+  }
+  .navbar-brand span {
+    font-size: 1rem !important;
   }
 }
 

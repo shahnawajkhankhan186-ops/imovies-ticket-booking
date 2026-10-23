@@ -131,7 +131,7 @@ export default function MovieDetailPage() {
                 )}
               </div>
 
-              <h1 className="fs-2 fs-md-1 display-md-5 fw-extrabold text-white mb-2">{movie.title}</h1>
+              <h1 className="hero-fluid-title fw-extrabold text-white mb-2">{movie.title}</h1>
 
               <div className="d-flex flex-wrap align-items-center gap-2 gap-sm-3 text-secondary small mb-3">
                 <span className="d-flex align-items-center gap-1">

@@ -242,10 +242,8 @@ export default function LandingPage() {
 
                 {/* Movie Title */}
                 <h1
-                  className="display-4 fw-extrabold text-white mb-2"
+                  className="hero-fluid-title fw-extrabold text-white mb-2"
                   style={{
-                    letterSpacing: '-1px',
-                    lineHeight: '1.15',
                     textShadow: '0 4px 24px rgba(0,0,0,0.85)',
                   }}
                 >
@@ -332,11 +330,11 @@ export default function LandingPage() {
                 )}
 
                 {/* Action Buttons */}
-                <div className="d-flex flex-wrap align-items-center gap-3">
+                <div className="d-flex flex-column flex-sm-row flex-wrap align-items-stretch align-items-sm-center gap-2 gap-sm-3">
                   <button
                     type="button"
                     onClick={() => handleMovieClick(currentMovie._id)}
-                    className="btn btn-danger btn-lg px-4 py-2.5 fw-bold rounded-pill shadow-lg d-flex align-items-center gap-2 transition"
+                    className="btn btn-danger btn-lg px-4 py-2.5 fw-bold rounded-pill shadow-lg d-flex align-items-center justify-content-center gap-2 transition w-100 w-sm-auto"
                     style={{
                       boxShadow: '0 8px 25px rgba(229, 9, 20, 0.55)',
                       fontSize: '15px',
@@ -351,7 +349,7 @@ export default function LandingPage() {
                     <button
                       type="button"
                       onClick={() => setTrailerMovie(currentMovie)}
-                      className="btn btn-outline-light btn-lg px-4 py-2.5 fw-bold rounded-pill d-flex align-items-center gap-2 transition"
+                      className="btn btn-outline-light btn-lg px-4 py-2.5 fw-bold rounded-pill d-flex align-items-center justify-content-center gap-2 transition w-100 w-sm-auto"
                       style={{ background: 'rgba(255, 255, 255, 0.08)', backdropFilter: 'blur(8px)', fontSize: '15px' }}
                     >
                       <Play size={17} fill="currentColor" />
@@ -362,7 +360,7 @@ export default function LandingPage() {
                   <button
                     type="button"
                     onClick={handleExploreClick}
-                    className="btn btn-outline-secondary text-light btn-lg px-3 py-2.5 fw-medium rounded-pill d-flex align-items-center gap-1.5 transition"
+                    className="btn btn-outline-secondary text-light btn-lg px-3 py-2.5 fw-medium rounded-pill d-flex align-items-center justify-content-center gap-1.5 transition w-100 w-sm-auto"
                     style={{ fontSize: '14px' }}
                   >
                     <Film size={16} />
@@ -431,14 +429,14 @@ export default function LandingPage() {
             </div>
           )}
 
-          {/* Carousel Arrows (Prev & Next) */}
+          {/* Carousel Arrows (Prev & Next - Desktop/Tablet Floating) */}
           {featuredMovies.length > 1 && (
             <>
               <button
                 type="button"
                 onClick={handlePrevHero}
                 aria-label="Previous Movie"
-                className="btn position-absolute top-50 start-0 translate-middle-y ms-2 ms-md-4 rounded-circle d-flex align-items-center justify-content-center text-white border-0 shadow"
+                className="btn position-absolute top-50 start-0 translate-middle-y ms-2 ms-md-4 rounded-circle d-none d-md-flex align-items-center justify-content-center text-white border-0 shadow"
                 style={{
                   width: '46px',
                   height: '46px',
@@ -455,7 +453,7 @@ export default function LandingPage() {
                 type="button"
                 onClick={handleNextHero}
                 aria-label="Next Movie"
-                className="btn position-absolute top-50 end-0 translate-middle-y me-2 me-md-4 rounded-circle d-flex align-items-center justify-content-center text-white border-0 shadow"
+                className="btn position-absolute top-50 end-0 translate-middle-y me-2 me-md-4 rounded-circle d-none d-md-flex align-items-center justify-content-center text-white border-0 shadow"
                 style={{
                   width: '46px',
                   height: '46px',
@@ -473,8 +471,28 @@ export default function LandingPage() {
           {/* Carousel Progress Indicators (Shows all listed movies, auto cycles every 5s) */}
           {featuredMovies.length > 1 && (
             <div className="d-flex flex-column flex-md-row align-items-center justify-content-between gap-3 pt-3 border-top border-secondary border-opacity-25 mt-4">
-              {/* Slide Counter & Pause Status */}
+              {/* Slide Counter & Mobile Arrow Controls */}
               <div className="d-flex align-items-center gap-2 text-secondary small" style={{ fontSize: '12px' }}>
+                <div className="d-flex d-md-none gap-1 me-2">
+                  <button
+                    type="button"
+                    onClick={handlePrevHero}
+                    className="btn btn-sm btn-dark border-secondary p-1 rounded-circle text-white d-flex align-items-center justify-content-center"
+                    style={{ width: '30px', height: '30px' }}
+                    aria-label="Previous Slide"
+                  >
+                    <ChevronLeft size={16} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleNextHero}
+                    className="btn btn-sm btn-dark border-secondary p-1 rounded-circle text-white d-flex align-items-center justify-content-center"
+                    style={{ width: '30px', height: '30px' }}
+                    aria-label="Next Slide"
+                  >
+                    <ChevronRight size={16} />
+                  </button>
+                </div>
                 <span className="text-danger fw-bold fs-6">
                   {String(currentHeroIndex + 1).padStart(2, '0')}
                 </span>
@@ -605,7 +623,7 @@ export default function LandingPage() {
               No movies currently scheduled in this category.
             </div>
           ) : (
-            <div className="row row-cols-2 row-cols-sm-3 row-cols-md-4 row-cols-lg-6 g-3 g-md-4">
+            <div className="row row-cols-2 row-cols-sm-3 row-cols-md-4 row-cols-lg-5 row-cols-xl-6 row-cols-xxl-6 g-2 g-sm-3 g-md-4">
               {displayedMovies.map((movie) => (
                 <div key={movie._id} className="col">
                   <div
