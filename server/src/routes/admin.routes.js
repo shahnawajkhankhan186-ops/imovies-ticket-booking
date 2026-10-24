@@ -17,6 +17,7 @@ import {
   createShow,
   updateShow,
   deleteShow,
+  bulkDeleteShows,
   getAdminShowSeatsHandler,
   getAdminBookings,
   getAdminBookingById,
@@ -72,6 +73,8 @@ router.delete('/screens/:id', deleteScreen);
 // Shows
 router.get('/shows', getAdminShows);
 router.post('/shows', createShow);
+router.post('/shows/bulk-delete', bulkDeleteShows);
+router.delete('/shows/bulk-delete', bulkDeleteShows);
 router.put('/shows/:id', updateShow);
 router.delete('/shows/:id', deleteShow);
 router.get('/shows/:id/seats', getAdminShowSeatsHandler);

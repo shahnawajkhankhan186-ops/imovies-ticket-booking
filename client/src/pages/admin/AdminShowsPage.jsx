@@ -68,6 +68,15 @@ export default function AdminShowsPage() {
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleting, setDeleting] = useState(false);
 
+  // Bulk Selection & Deletion State
+  const [selectedShowIds, setSelectedShowIds] = useState([]);
+  const [bulkModalOpen, setBulkModalOpen] = useState(false);
+  const [bulkMode, setBulkMode] = useState('date'); // 'date' | 'past' | 'selected'
+  const [bulkDate, setBulkDate] = useState('');
+  const [bulkTheatreId, setBulkTheatreId] = useState('');
+  const [bulkMovieId, setBulkMovieId] = useState('');
+  const [bulkDeleting, setBulkDeleting] = useState(false);
+
   const fetchShows = useCallback(async () => {
     try {
       setLoading(true);
@@ -249,14 +258,66 @@ export default function AdminShowsPage() {
     setDeleting(true);
     try {
       const res = await api.delete(`/admin/shows/${deleteTarget._id}`);
-      toast.success(res.data.message || 'Show cancelled and auto-refunds processed');
+      toast.success(res.data.message || 'Show deleted successfully');
       setDeleteTarget(null);
+      setSelectedShowIds((prev) => prev.filter((id) => id !== deleteTarget._id));
       fetchShows();
     } catch (err) {
-      toast.error(err.message || 'Failed to cancel show');
+      toast.error(err.message || 'Failed to delete show');
     } finally {
       setDeleting(false);
     }
+  };
+
+  const handleBulkDelete = async () => {
+    setBulkDeleting(true);
+    try {
+      let payload = {};
+      if (bulkMode === 'selected') {
+        if (selectedShowIds.length === 0) {
+          toast.error('No shows selected');
+          return;
+        }
+        payload = { showIds: selectedShowIds };
+      } else if (bulkMode === 'date') {
+        if (!bulkDate) {
+          toast.error('Please pick a date for bulk deletion');
+          return;
+        }
+        payload = { date: bulkDate };
+        if (bulkTheatreId) payload.theatreId = bulkTheatreId;
+        if (bulkMovieId) payload.movieId = bulkMovieId;
+      } else if (bulkMode === 'past') {
+        payload = { beforeDate: 'now' };
+        if (bulkTheatreId) payload.theatreId = bulkTheatreId;
+        if (bulkMovieId) payload.movieId = bulkMovieId;
+      }
+
+      const res = await api.post('/admin/shows/bulk-delete', payload);
+      toast.success(res.data.message || 'Shows deleted successfully!');
+      setBulkModalOpen(false);
+      setSelectedShowIds([]);
+      setBulkDate('');
+      fetchShows();
+    } catch (err) {
+      toast.error(err.message || 'Failed to bulk delete shows');
+    } finally {
+      setBulkDeleting(false);
+    }
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedShowIds.length === shows.length) {
+      setSelectedShowIds([]);
+    } else {
+      setSelectedShowIds(shows.map((s) => s._id));
+    }
+  };
+
+  const toggleSelectShow = (id) => {
+    setSelectedShowIds((prev) =>
+      prev.includes(id) ? prev.filter((sId) => sId !== id) : [...prev, id]
+    );
   };
 
   const startIndex = total === 0 ? 0 : (page - 1) * (limit === 'all' ? total : limit) + 1;
@@ -278,15 +339,29 @@ export default function AdminShowsPage() {
           </p>
         </div>
 
-        <Button
-          variant="primary"
-          onClick={handleOpenCreate}
-          disabled={movies.length === 0 || screens.length === 0}
-          className="d-flex align-items-center justify-content-center gap-2 w-100 w-sm-auto shadow"
-        >
-          <Plus size={16} />
-          <span>Schedule New Show</span>
-        </Button>
+        <div className="d-flex flex-wrap align-items-center gap-2 w-100 w-sm-auto">
+          <button
+            type="button"
+            className="btn btn-outline-danger d-flex align-items-center justify-content-center gap-2 shadow-sm"
+            onClick={() => {
+              setBulkMode(selectedShowIds.length > 0 ? 'selected' : 'date');
+              setBulkModalOpen(true);
+            }}
+          >
+            <Trash2 size={16} />
+            <span>Bulk Delete Shows</span>
+          </button>
+
+          <Button
+            variant="primary"
+            onClick={handleOpenCreate}
+            disabled={movies.length === 0 || screens.length === 0}
+            className="d-flex align-items-center justify-content-center gap-2 shadow"
+          >
+            <Plus size={16} />
+            <span>Schedule New Show</span>
+          </Button>
+        </div>
       </div>
 
       {/* Comprehensive Filter Control Bar */}
@@ -470,6 +545,40 @@ export default function AdminShowsPage() {
           </div>
         ) : (
           <div>
+            {/* Multi-selection Floating Action Bar */}
+            {selectedShowIds.length > 0 && (
+              <div
+                className="d-flex flex-wrap align-items-center justify-content-between p-3 rounded-3 mb-3 border border-danger-subtle gap-2"
+                style={{ background: 'rgba(239, 68, 68, 0.12)' }}
+              >
+                <div className="d-flex align-items-center gap-2">
+                  <AlertTriangle className="text-danger" size={18} />
+                  <span className="text-light fw-medium">
+                    <strong className="text-danger">{selectedShowIds.length}</strong>{' '}
+                    {selectedShowIds.length === 1 ? 'screening' : 'screenings'} selected on this page
+                  </span>
+                </div>
+                <div className="d-flex align-items-center gap-2">
+                  <button
+                    className="btn btn-sm btn-outline-secondary"
+                    onClick={() => setSelectedShowIds([])}
+                  >
+                    Clear Selection
+                  </button>
+                  <button
+                    className="btn btn-sm btn-danger d-flex align-items-center gap-1.5 fw-semibold"
+                    onClick={() => {
+                      setBulkMode('selected');
+                      setBulkModalOpen(true);
+                    }}
+                  >
+                    <Trash2 size={14} />
+                    <span>Delete Selected ({selectedShowIds.length})</span>
+                  </button>
+                </div>
+              </div>
+            )}
+
             <div className="table-responsive touch-scroll">
               <table
                 className="table table-dark table-hover align-middle mb-0 text-nowrap"
@@ -477,18 +586,45 @@ export default function AdminShowsPage() {
               >
                 <thead>
                   <tr className="text-secondary small text-uppercase">
+                    <th style={{ width: '40px' }} className="ps-3">
+                      <input
+                        type="checkbox"
+                        className="form-check-input"
+                        style={{ cursor: 'pointer' }}
+                        checked={shows.length > 0 && selectedShowIds.length === shows.length}
+                        onChange={toggleSelectAll}
+                        aria-label="Select all shows"
+                      />
+                    </th>
                     <th>Movie</th>
                     <th>Cinema & Screen</th>
                     <th>Showtime (IST)</th>
                     <th>Format / Audio</th>
                     <th>Pricing (Base)</th>
                     <th>Status</th>
-                    <th className="text-end">Actions</th>
+                    <th className="text-end pe-3">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {shows.map((s) => (
-                    <tr key={s._id}>
+                    <tr
+                      key={s._id}
+                      style={
+                        selectedShowIds.includes(s._id)
+                          ? { background: 'rgba(239, 68, 68, 0.08)' }
+                          : {}
+                      }
+                    >
+                      <td className="ps-3">
+                        <input
+                          type="checkbox"
+                          className="form-check-input"
+                          style={{ cursor: 'pointer' }}
+                          checked={selectedShowIds.includes(s._id)}
+                          onChange={() => toggleSelectShow(s._id)}
+                          aria-label={`Select show ${s.movieId?.title}`}
+                        />
+                      </td>
                       <td>
                         <div className="d-flex align-items-center gap-3">
                           <img
@@ -545,7 +681,7 @@ export default function AdminShowsPage() {
                       <td>
                         <StatusBadge status={s.status} />
                       </td>
-                      <td className="text-end">
+                      <td className="text-end pe-3">
                         <div className="d-inline-flex gap-2">
                           <button
                             className="btn btn-sm btn-outline-info d-flex align-items-center gap-1"
@@ -558,7 +694,7 @@ export default function AdminShowsPage() {
                           <button
                             className="btn btn-sm btn-outline-danger"
                             onClick={() => setDeleteTarget(s)}
-                            title="Cancel Show & Auto-Refund"
+                            title="Delete Show & Seat Inventory"
                           >
                             <Trash2 size={14} />
                           </button>
@@ -813,15 +949,212 @@ export default function AdminShowsPage() {
         </Modal>
       )}
 
-      {/* Cancel Show Dialog */}
+      {/* Date-Wise & Bulk Delete Shows Modal */}
+      <Modal
+        isOpen={bulkModalOpen}
+        title="Bulk Delete Showtime Screenings"
+        onClose={() => setBulkModalOpen(false)}
+        size="lg"
+      >
+        <div>
+          {/* Mode Selector Tabs */}
+          <div className="d-flex gap-2 p-1 rounded-3 mb-4" style={{ background: '#0a0d18', border: '1px solid var(--border-color)' }}>
+            <button
+              type="button"
+              className={`btn btn-sm flex-grow-1 ${bulkMode === 'date' ? 'btn-danger text-white fw-bold' : 'btn-dark text-secondary'}`}
+              onClick={() => setBulkMode('date')}
+            >
+              Date-Wise Delete
+            </button>
+            <button
+              type="button"
+              className={`btn btn-sm flex-grow-1 ${bulkMode === 'past' ? 'btn-danger text-white fw-bold' : 'btn-dark text-secondary'}`}
+              onClick={() => setBulkMode('past')}
+            >
+              Purge All Past Shows
+            </button>
+            {selectedShowIds.length > 0 && (
+              <button
+                type="button"
+                className={`btn btn-sm flex-grow-1 ${bulkMode === 'selected' ? 'btn-danger text-white fw-bold' : 'btn-dark text-secondary'}`}
+                onClick={() => setBulkMode('selected')}
+              >
+                Selected Shows ({selectedShowIds.length})
+              </button>
+            )}
+          </div>
+
+          {/* Mode 1: By Specific Date */}
+          {bulkMode === 'date' && (
+            <div className="mb-4">
+              <label className="form-label text-light fw-medium">
+                Target Date for Bulk Deletion <span className="text-danger">*</span>
+              </label>
+              <input
+                type="date"
+                className="form-control text-light"
+                value={bulkDate}
+                onChange={(e) => setBulkDate(e.target.value)}
+                style={{ background: '#121624', borderColor: 'var(--border-color)' }}
+                required
+              />
+              <div className="form-text text-secondary mt-1">
+                All shows scheduled on this calendar day in Indian Standard Time (IST) will be deleted.
+              </div>
+
+              {/* Optional Narrowing Filters */}
+              <div className="row g-2 mt-3">
+                <div className="col-12 col-md-6">
+                  <label className="form-label text-secondary small">Filter by Cinema (Optional)</label>
+                  <select
+                    className="form-select text-light"
+                    value={bulkTheatreId}
+                    onChange={(e) => setBulkTheatreId(e.target.value)}
+                    style={{ background: '#121624', borderColor: 'var(--border-color)' }}
+                  >
+                    <option value="">All Theatres on this Date</option>
+                    {theatres.map((t) => (
+                      <option key={t._id} value={t._id}>
+                        {t.name} ({t.city})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="col-12 col-md-6">
+                  <label className="form-label text-secondary small">Filter by Movie (Optional)</label>
+                  <select
+                    className="form-select text-light"
+                    value={bulkMovieId}
+                    onChange={(e) => setBulkMovieId(e.target.value)}
+                    style={{ background: '#121624', borderColor: 'var(--border-color)' }}
+                  >
+                    <option value="">All Movies on this Date</option>
+                    {movies.map((m) => (
+                      <option key={m._id} value={m._id}>
+                        {m.title}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Mode 2: Purge All Past Shows */}
+          {bulkMode === 'past' && (
+            <div className="mb-4">
+              <div className="alert alert-warning p-3 small d-flex gap-2 mb-3">
+                <AlertTriangle size={20} className="flex-shrink-0 text-warning" />
+                <div>
+                  <strong>Purge Old Historical Screenings:</strong>
+                  <div className="pt-1">
+                    This will delete all past screenings that have already ended, free up database storage, and clean up orphan seat maps.
+                  </div>
+                </div>
+              </div>
+
+              <div className="row g-2">
+                <div className="col-12 col-md-6">
+                  <label className="form-label text-secondary small">Filter by Cinema (Optional)</label>
+                  <select
+                    className="form-select text-light"
+                    value={bulkTheatreId}
+                    onChange={(e) => setBulkTheatreId(e.target.value)}
+                    style={{ background: '#121624', borderColor: 'var(--border-color)' }}
+                  >
+                    <option value="">All Theatres</option>
+                    {theatres.map((t) => (
+                      <option key={t._id} value={t._id}>
+                        {t.name} ({t.city})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="col-12 col-md-6">
+                  <label className="form-label text-secondary small">Filter by Movie (Optional)</label>
+                  <select
+                    className="form-select text-light"
+                    value={bulkMovieId}
+                    onChange={(e) => setBulkMovieId(e.target.value)}
+                    style={{ background: '#121624', borderColor: 'var(--border-color)' }}
+                  >
+                    <option value="">All Movies</option>
+                    {movies.map((m) => (
+                      <option key={m._id} value={m._id}>
+                        {m.title}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Mode 3: Selected Shows */}
+          {bulkMode === 'selected' && (
+            <div className="mb-4">
+              <div className="alert alert-info p-3 small d-flex gap-2 mb-0">
+                <Eye size={20} className="flex-shrink-0 text-info" />
+                <div>
+                  <strong>Selected Screenings:</strong>
+                  <div className="pt-1">
+                    You have checked <strong>{selectedShowIds.length}</strong> specific screenings on this page to delete.
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Critical Warning Box */}
+          <div className="alert alert-danger p-3 small d-flex gap-2 mb-4">
+            <AlertTriangle size={20} className="flex-shrink-0 text-danger" />
+            <div>
+              <strong>Irreversible Deletion & Refund Invariant:</strong>
+              <div className="pt-1">
+                All seat inventories and screening records matching this criteria will be permanently deleted. Any customers with active confirmed bookings will be automatically refunded 100% via Razorpay.
+              </div>
+            </div>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="d-flex justify-content-end gap-2">
+            <Button
+              variant="outline-secondary"
+              onClick={() => setBulkModalOpen(false)}
+              disabled={bulkDeleting}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="danger"
+              onClick={handleBulkDelete}
+              disabled={bulkDeleting || (bulkMode === 'date' && !bulkDate) || (bulkMode === 'selected' && selectedShowIds.length === 0)}
+              className="d-flex align-items-center gap-2"
+            >
+              {bulkDeleting ? <LoadingSpinner size="sm" /> : <Trash2 size={16} />}
+              <span>
+                {bulkDeleting
+                  ? 'Deleting Shows...'
+                  : bulkMode === 'selected'
+                  ? `Delete Selected Shows (${selectedShowIds.length})`
+                  : bulkMode === 'date'
+                  ? `Delete All Shows on ${bulkDate || 'Selected Date'}`
+                  : 'Purge All Past Shows'}
+              </span>
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Single Delete Show Dialog */}
       <ConfirmDialog
         isOpen={Boolean(deleteTarget)}
-        title="Cancel Show & Issue Automated Refunds"
+        title="Delete Show & Seat Inventory"
         message={
           deleteTarget ? (
             <div>
               <p>
-                Are you sure you want to cancel the show of <strong>{deleteTarget.movieId?.title}</strong> on{' '}
+                Are you sure you want to permanently delete the show of <strong>{deleteTarget.movieId?.title}</strong> on{' '}
                 <strong>{formatISTDateTime(deleteTarget.startTime)}</strong>?
               </p>
               <div className="alert alert-danger p-3 small mb-0 d-flex gap-2">
@@ -829,8 +1162,7 @@ export default function AdminShowsPage() {
                 <div>
                   <strong>Refund Invariant:</strong>
                   <div className="pt-1">
-                    Cancelling this show will immediately trigger <strong>100% automated refunds</strong> to all
-                    moviegoers with confirmed bookings, cancel their tickets, and release all seats.
+                    Deleting this show will release and remove all seat inventory records. Any confirmed bookings will be <strong>100% automatically refunded</strong> to moviegoers.
                   </div>
                 </div>
               </div>
@@ -839,7 +1171,7 @@ export default function AdminShowsPage() {
             ''
           )
         }
-        confirmText="Confirm Cancellation & Refund"
+        confirmText="Delete Show & Clean Inventory"
         variant="danger"
         loading={deleting}
         onConfirm={handleDeleteShow}
