@@ -10,6 +10,7 @@ import { razorpay } from '../config/razorpay.js';
 import { BOOKING_STATUS, PAYMENT_STATUS, REFUND_STATUS, SEAT_STATUS } from '../constants/enums.js';
 import { isSeatFree } from '../services/seatAvailability.service.js';
 import { emitToShowRoom } from '../sockets/seatSocket.js';
+import { sendBookingConfirmationEmail } from '../utils/mailer.js';
 
 export async function handleRazorpayWebhook(req, res) {
   // 1. Verify webhook secret is configured
@@ -160,6 +161,30 @@ export async function handleRazorpayWebhook(req, res) {
         });
 
         console.log(`\x1b[32m[CONFIRMED BOOKING]\x1b[0m Booking ${booking.bookingCode} confirmed.`);
+
+        // Dispatch confirmation email & attached PDF ticket
+        Booking.findById(booking._id)
+          .populate('userId', 'name email phone')
+          .populate({
+            path: 'showId',
+            populate: [{ path: 'movieId', select: 'title' }, { path: 'theatreId', select: 'name' }],
+          })
+          .then((b) => {
+            if (b && b.userId?.email) {
+              sendBookingConfirmationEmail({
+                to: b.userId.email,
+                name: b.userId.name,
+                bookingCode: b.bookingCode,
+                movieTitle: b.showId?.movieId?.title || 'Movie',
+                theatreName: b.showId?.theatreId?.name || 'Cinema',
+                showDate: b.showDateSnapshot || 'Confirmed',
+                showTime: b.showTimeSnapshot || '',
+                seats: b.seats.map((s) => s.seatLabel),
+                totalFormatted: `₹${(b.total / 100).toFixed(2)}`,
+              }).catch(() => {});
+            }
+          })
+          .catch(() => {});
       } else {
         // LATE CAPTURE RE-BOOKED: Seats were taken by someone else! Auto-refund to prevent dropping money.
         console.warn(
