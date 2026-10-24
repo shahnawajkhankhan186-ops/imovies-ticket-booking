@@ -577,21 +577,109 @@ export async function updateShow(req, res, next) {
 
 export async function deleteShow(req, res, next) {
   try {
-    // If show has bookings, invoke cancelShowAndRefundAll
-    const hasBookings = await Booking.exists({ showId: req.params.id });
-    if (hasBookings) {
-      const result = await cancelShowAndRefundAll(req.params.id, req.user);
-      await logAudit(req.user, 'CANCEL_AND_REFUND_SHOW', AUDIT_ENTITIES.SHOW, req.params.id, null, result, req.ip);
-      return res.status(200).json(result);
-    }
-
-    // No bookings -> safe to delete inventory and show
-    await ShowSeat.deleteMany({ showId: req.params.id });
-    const show = await Show.findByIdAndDelete(req.params.id);
+    const show = await Show.findById(req.params.id);
     if (!show) return res.status(404).json({ error: MESSAGES.RESOURCE_NOT_FOUND });
 
+    // If show has confirmed bookings, refund them all first
+    const confirmedBookingsCount = await Booking.countDocuments({
+      showId: show._id,
+      status: BOOKING_STATUS.CONFIRMED,
+    });
+
+    if (confirmedBookingsCount > 0) {
+      await cancelShowAndRefundAll(show._id, req.user);
+    }
+
+    // Delete inventory and show document
+    await ShowSeat.deleteMany({ showId: show._id });
+    await Show.findByIdAndDelete(show._id);
+
+    // Clear caches
+    apiCache.clear();
+
     await logAudit(req.user, 'DELETE', AUDIT_ENTITIES.SHOW, show._id, show.toObject(), null, req.ip);
-    return res.status(200).json({ message: 'Show deleted successfully.' });
+    return res.status(200).json({
+      message: confirmedBookingsCount > 0
+        ? `Show deleted and ${confirmedBookingsCount} bookings refunded successfully.`
+        : 'Show deleted successfully.',
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function bulkDeleteShows(req, res, next) {
+  try {
+    const { date, beforeDate, showIds, theatreId, movieId } = req.body;
+    let filter = {};
+
+    if (Array.isArray(showIds) && showIds.length > 0) {
+      filter._id = { $in: showIds };
+    } else if (date) {
+      // Date-wise: specific date string YYYY-MM-DD
+      const { startUTC, endUTC } = getISTDayRange(date);
+      filter.startTime = { $gte: startUTC, $lte: endUTC };
+    } else if (beforeDate) {
+      // All past shows before a given instant or date
+      const cutoff = beforeDate === 'now' ? new Date() : new Date(beforeDate);
+      filter.startTime = { $lt: cutoff };
+    } else {
+      return res.status(400).json({
+        error: 'Please specify a target date, beforeDate, or an array of showIds to bulk delete.',
+      });
+    }
+
+    if (theatreId) filter.theatreId = theatreId;
+    if (movieId) filter.movieId = movieId;
+
+    // Find all matching shows
+    const targetShows = await Show.find(filter).select('_id startTime');
+    if (targetShows.length === 0) {
+      return res.status(200).json({
+        message: 'No shows matched the specified criteria.',
+        deletedCount: 0,
+      });
+    }
+
+    const targetIds = targetShows.map((s) => s._id);
+
+    // Cancel and refund any confirmed bookings for these shows
+    const showsWithConfirmedBookings = await Booking.distinct('showId', {
+      showId: { $in: targetIds },
+      status: BOOKING_STATUS.CONFIRMED,
+    });
+
+    for (const sId of showsWithConfirmedBookings) {
+      try {
+        await cancelShowAndRefundAll(sId, req.user);
+      } catch (e) {
+        console.warn(`[BULK DELETE REFUND WARN] Failed to refund show ${sId}:`, e.message);
+      }
+    }
+
+    // Delete ShowSeats inventory in bulk
+    await ShowSeat.deleteMany({ showId: { $in: targetIds } });
+
+    // Delete Shows in bulk
+    const deleteResult = await Show.deleteMany({ _id: { $in: targetIds } });
+
+    // Clear API caches
+    apiCache.clear();
+
+    await logAudit(
+      req.user,
+      'BULK_DELETE_SHOWS',
+      AUDIT_ENTITIES.SHOW,
+      targetIds[0],
+      { count: targetShows.length, filter },
+      null,
+      req.ip
+    );
+
+    return res.status(200).json({
+      message: `Successfully deleted ${deleteResult.deletedCount} shows and cleaned up seat inventories.`,
+      deletedCount: deleteResult.deletedCount,
+    });
   } catch (error) {
     next(error);
   }
