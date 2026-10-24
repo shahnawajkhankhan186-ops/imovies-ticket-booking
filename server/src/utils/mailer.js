@@ -54,11 +54,16 @@ async function sendViaBrevo({ to, subject, html, attachments = [], senderName = 
     }));
   }
 
+  let apiKey = (process.env.BREVO_API_KEY || process.env.SENDINBLUE_API_KEY || '').trim();
+  if (apiKey && !apiKey.startsWith('xkeysib-')) {
+    apiKey = `xkeysib-${apiKey}`;
+  }
+
   const response = await fetch('https://api.brevo.com/v3/smtp/email', {
     method: 'POST',
     headers: {
       accept: 'application/json',
-      'api-key': process.env.BREVO_API_KEY || process.env.SENDINBLUE_API_KEY,
+      'api-key': apiKey,
       'content-type': 'application/json',
     },
     body: JSON.stringify(payload),
