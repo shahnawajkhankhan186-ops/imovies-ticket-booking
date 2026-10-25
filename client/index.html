@@ -5,15 +5,31 @@
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover" />
     <title>IMovies — Movie ticket booking made simple</title>
-    <!-- Google Fonts: Outfit & Inter -->
+
+    <!-- DNS prefetch & Preconnect to Render backend & CDN -->
+    <link rel="preconnect" href="https://imovies-ticket-booking-xrmv.onrender.com" crossorigin />
+    <link rel="dns-prefetch" href="https://imovies-ticket-booking-xrmv.onrender.com" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
       href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap"
       rel="stylesheet"
     />
-    <!-- Razorpay Checkout script -->
-    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+
+    <!-- Early Background Cloud Server Wakeup (Wakes sleeping Render container before React parses) -->
+    <script>
+      (function() {
+        try {
+          var backendUrl = 'https://imovies-ticket-booking-xrmv.onrender.com/api/health';
+          if (window.fetch) {
+            window.fetch(backendUrl, { method: 'GET', cache: 'no-store', mode: 'no-cors' }).catch(function(){});
+          }
+        } catch (e) {}
+      })();
+    </script>
+
+    <!-- Razorpay Checkout script (deferred to not block main thread on mobile) -->
+    <script defer src="https://checkout.razorpay.com/v1/checkout.js"></script>
   </head>
   <body>
     <div id="root"></div>

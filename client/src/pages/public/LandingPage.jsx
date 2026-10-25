@@ -21,29 +21,49 @@ import toast from 'react-hot-toast';
 import api from '../../lib/api';
 import { useAuth } from '../../hooks/useAuth';
 import TrailerModal from '../../components/movies/TrailerModal';
+import { getStoredMovies, setStoredMovies } from '../../constants/bootstrapMovies';
 
 export default function LandingPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [featuredMovies, setFeaturedMovies] = useState([]);
+  // Instant 0ms render from localStorage or local bootstrap catalog
+  const [featuredMovies, setFeaturedMovies] = useState(() => getStoredMovies());
   const [currentHeroIndex, setCurrentHeroIndex] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
   const [selectedGenre, setSelectedGenre] = useState('ALL');
   const [trailerMovie, setTrailerMovie] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [isServerWarming, setIsServerWarming] = useState(false);
 
   useEffect(() => {
+    let isMounted = true;
+    const warmTimer = setTimeout(() => {
+      if (isMounted) setIsServerWarming(true);
+    }, 3000);
+
     async function loadFeatured() {
       try {
         const res = await api.get('/public/movies', { params: { limit: 24 } });
-        setFeaturedMovies(res.data.movies || []);
+        if (isMounted && res.data.movies && res.data.movies.length > 0) {
+          setFeaturedMovies(res.data.movies);
+          setStoredMovies(res.data.movies);
+        }
       } catch (err) {
-        console.error('Failed to load landing movies:', err);
+        console.warn('Background refresh for landing movies:', err.message);
       } finally {
-        setLoading(false);
+        clearTimeout(warmTimer);
+        if (isMounted) {
+          setLoading(false);
+          setIsServerWarming(false);
+        }
       }
     }
     loadFeatured();
+
+    return () => {
+      isMounted = false;
+      clearTimeout(warmTimer);
+    };
   }, []);
 
   // Auto-slide hero banner every 5 seconds (5000ms)
@@ -181,7 +201,8 @@ export default function LandingPage() {
                 src={bgUrl}
                 alt={movie.title}
                 className="w-100 h-100 object-fit-cover"
-                loading={idx < 2 ? 'eager' : 'lazy'}
+                loading={idx === 0 ? 'eager' : 'lazy'}
+                fetchPriority={idx === 0 ? 'high' : 'auto'}
               />
               {/* Deep Cinema Vignette & Gradients Overlay */}
               <div
@@ -423,9 +444,15 @@ export default function LandingPage() {
               </div>
             </div>
           ) : (
-            <div className="text-center py-5">
-              <h2 className="display-4 fw-bold">Welcome to iMovies</h2>
-              <p className="text-secondary lead">Loading premier blockbusters...</p>
+            <div className="text-center py-5 d-flex flex-column align-items-center justify-content-center" style={{ minHeight: '360px' }}>
+              <div className="spinner-border text-danger mb-3" style={{ width: '2.5rem', height: '2.5rem' }} role="status" />
+              <h2 className="display-5 fw-bold text-white mb-2">Welcome to iMovies</h2>
+              <p className="text-secondary lead mb-0">Loading cinema blockbusters...</p>
+              {isServerWarming && (
+                <div className="mt-3 badge bg-dark border border-warning text-warning px-3 py-2 rounded-pill small animate-pulse">
+                  ⚡ Cloud server waking up, hang tight...
+                </div>
+              )}
             </div>
           )}
 
