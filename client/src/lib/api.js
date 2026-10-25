@@ -1,27 +1,77 @@
 import axios from 'axios';
 
+// Smart resolution for backend API
+const defaultProductionApi = 'https://imovies-ticket-booking-xrmv.onrender.com/api';
+const baseURL =
+  import.meta.env.VITE_API_URL ||
+  (import.meta.env.PROD ? defaultProductionApi : 'http://localhost:5001/api');
+
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5001/api',
+  baseURL,
   withCredentials: true,
+  timeout: 30000, // 30s timeout to prevent zombie connections on mobile
   headers: {
     'Content-Type': 'application/json',
   },
 });
 
-// High-speed client cache for read-heavy GET requests
-const clientCache = new Map();
+// High-speed persistent client cache for read-heavy GET requests
+const CACHE_PREFIX = 'imovies_api_cache_';
+const memoryCache = new Map();
 
 function getCacheKey(url, params) {
   return `${url}:${params ? JSON.stringify(params) : ''}`;
+}
+
+function getStoredCache(key) {
+  // 1. Try memory cache first (sub-millisecond)
+  const mem = memoryCache.get(key);
+  if (mem && Date.now() < mem.expiresAt) {
+    return mem.data;
+  }
+
+  // 2. Try persistent localStorage (instant across page reloads on mobile)
+  if (typeof window !== 'undefined') {
+    try {
+      const raw = localStorage.getItem(CACHE_PREFIX + key);
+      if (raw) {
+        const item = JSON.parse(raw);
+        if (item && Date.now() < item.expiresAt) {
+          memoryCache.set(key, item);
+          return item.data;
+        }
+        localStorage.removeItem(CACHE_PREFIX + key);
+      }
+    } catch {
+      // localStorage disabled or full
+    }
+  }
+  return null;
+}
+
+function setStoredCache(key, data, ttlMs = 15 * 60 * 1000) {
+  const record = {
+    data,
+    expiresAt: Date.now() + ttlMs,
+  };
+  memoryCache.set(key, record);
+
+  if (typeof window !== 'undefined') {
+    try {
+      localStorage.setItem(CACHE_PREFIX + key, JSON.stringify(record));
+    } catch {
+      // Quota exceeded or private browsing
+    }
+  }
 }
 
 // Request interceptor: return cached response immediately (0ms)
 api.interceptors.request.use((config) => {
   const method = (config.method || 'get').toLowerCase();
 
-  // Any mutation (POST, PUT, DELETE, PATCH) immediately flushes the client cache
+  // Any mutation (POST, PUT, DELETE, PATCH) flushes cache
   if (method !== 'get') {
-    clientCache.clear();
+    api.clearCache();
     return config;
   }
 
@@ -35,13 +85,14 @@ api.interceptors.request.use((config) => {
   const isCacheable = config.url && config.url.startsWith('/public/');
   if (isCacheable) {
     const key = getCacheKey(config.url, config.params);
-    const cachedEntry = clientCache.get(key);
-    if (cachedEntry && Date.now() < cachedEntry.expiresAt) {
+    const cachedData = getStoredCache(key);
+
+    if (cachedData) {
       config.adapter = () => {
         return Promise.resolve({
-          data: cachedEntry.data,
+          data: cachedData,
           status: 200,
-          statusText: 'OK (Cache)',
+          statusText: 'OK (Persistent Cache)',
           headers: {},
           config,
           request: {},
@@ -61,11 +112,10 @@ api.interceptors.response.use(
 
     if (method === 'get' && config.url && config.url.startsWith('/public/') && !config.url.includes('/seats')) {
       const key = getCacheKey(config.url, config.params);
-      // Cache for 20 seconds
-      clientCache.set(key, {
-        data: response.data,
-        expiresAt: Date.now() + 20 * 1000,
-      });
+      // Movies and cities cache for 30 minutes; shows cache for 3 minutes
+      const isShows = config.url.includes('/shows');
+      const ttl = isShows ? 3 * 60 * 1000 : 30 * 60 * 1000;
+      setStoredCache(key, response.data, ttl);
     }
 
     return response;
@@ -81,6 +131,22 @@ api.interceptors.response.use(
   }
 );
 
-api.clearCache = () => clientCache.clear();
+api.clearCache = () => {
+  memoryCache.clear();
+  if (typeof window !== 'undefined') {
+    try {
+      const keysToRemove = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (k && k.startsWith(CACHE_PREFIX)) {
+          keysToRemove.push(k);
+        }
+      }
+      keysToRemove.forEach((k) => localStorage.removeItem(k));
+    } catch {
+      // ignore
+    }
+  }
+};
 
 export default api;

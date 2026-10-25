@@ -9,13 +9,18 @@ import MovieCard from '../../components/movies/MovieCard';
 import TrailerModal from '../../components/movies/TrailerModal';
 import LoadingSpinner from '../../components/ui/LoadingSpinner';
 import EmptyState from '../../components/ui/EmptyState';
+import { getStoredMovies } from '../../constants/bootstrapMovies';
 
 export default function HomePage() {
   const { city } = useCity();
   const { user } = useAuth();
-  const [movies, setMovies] = useState([]);
+  const [movies, setMovies] = useState(() => {
+    const all = getStoredMovies();
+    const nowShowing = all.filter((m) => m.status === 'NOW_SHOWING');
+    return nowShowing.length > 0 ? nowShowing : all;
+  });
   const [favMovieIds, setFavMovieIds] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('NOW_SHOWING'); // NOW_SHOWING | UPCOMING
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedGenre, setSelectedGenre] = useState('');
